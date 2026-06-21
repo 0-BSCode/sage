@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"${CLAUDE_PLUGIN_ROOT}\" > /tmp/.ultralearn-plugin-root"
+            "command": "echo \"${CLAUDE_PLUGIN_ROOT}\" > /tmp/.ultralearn-plugin-root && python3 \"${CLAUDE_PLUGIN_ROOT}/tools/config.py\" > /tmp/.ultralearn-learning-root 2>/dev/null || true"
           }
         ]
       }

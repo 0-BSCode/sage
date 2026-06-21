@@ -15,7 +15,7 @@ Retired cards (`### Card N [RETIRED]`) are excluded from comparison.
 Usage:
     python3 find_duplicate_cards.py [--root <path>]
 
-Defaults to ~/Documents/codes/labs/ultralearn/.
+Defaults to the configured learning root (see tools/config.py).
 
 Exit code is always 0 — this is a report tool, not a CI gate.
 
@@ -31,13 +31,12 @@ from typing import Dict, List
 # Import shared helpers from the sibling card_writer module so normalization
 # stays in lockstep with the writer's dedup logic.
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from card_writer import (  # noqa: E402
     normalize_question,
     parse_existing_cards,
 )
-
-
-DEFAULT_ROOT = Path.home() / "Documents/codes/labs/ultralearn"
+from config import get_learning_root  # noqa: E402
 
 
 def find_decks(root: Path) -> List[Path]:
@@ -98,16 +97,27 @@ def format_deck_report(deck_path: Path, root: Path, duplicate_groups: Dict[str, 
 
 
 def main() -> None:
+    default_root = get_learning_root()
+
     parser = argparse.ArgumentParser(
         description="Scan ultralearning decks for strict question-text duplicates."
     )
     parser.add_argument(
         "--root",
         type=Path,
-        default=DEFAULT_ROOT,
-        help=f"Root directory to scan (default: {DEFAULT_ROOT})",
+        default=default_root,
+        help="Root directory to scan"
+              + (f" (default: {default_root})" if default_root else ""),
     )
     args = parser.parse_args()
+
+    if args.root is None:
+        print(
+            "Error: no learning root configured. "
+            "Pass --root or set ULTRALEARN_LEARNING_ROOT.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     if not args.root.exists():
         print(f"Error: root directory does not exist: {args.root}", file=sys.stderr)

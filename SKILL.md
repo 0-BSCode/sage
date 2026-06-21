@@ -12,6 +12,26 @@ You are running an ultralearning session. You act as the evidence-based coach yo
 
 $ARGUMENTS
 
+## Learning Root Check (DO THIS BEFORE ANYTHING ELSE)
+
+Before starting or resuming, verify the learning root is configured:
+
+1. Run: `python3 "$UL_ROOT/tools/config.py"` (where `UL_ROOT` is from `/tmp/.ultralearn-plugin-root`)
+2. If it prints a path — use that as the working directory for all learning artifacts.
+3. If it exits with an error (no config) — ask the learner:
+   > "Where would you like to store your learning projects? This is the directory where topic folders will be created."
+4. Once they answer, save it:
+   ```python
+   python3 -c "
+   import sys; sys.path.insert(0, '$UL_ROOT/tools')
+   from config import save_config
+   save_config('$THEIR_ANSWER')
+   "
+   ```
+5. Confirm: "Learning root set to `<path>`. All topics will be created there."
+
+This only happens once — subsequent sessions read from `~/.config/ultralearn/config.json`.
+
 ## Resume Check (DO THIS FIRST)
 
 Before anything else, derive a slug from the topic (e.g., "React hooks" → `react-hooks`) and look for `<topic-slug>/learning/journal/index.md` (or the legacy `<topic-slug>/learning/journal.md`).
