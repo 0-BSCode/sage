@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-ultralearn",
+  "name": "ultralearn",
   "description": "Evidence-based ultralearning coach with spaced repetition, retrieval practice, and mastery tracking",
   "owner": {
     "name": "0-BSCode",
@@ -16,7 +16,7 @@
         "name": "0-BSCode"
       },
       "category": "productivity",
-      "homepage": "https://github.com/0-BSCode/claude-ultralearn",
+      "homepage": "https://github.com/0-BSCode/ultralearn",
       "tags": ["ultralearning", "spaced-repetition", "flashcards", "mastery-tracking", "socratic-tutoring"]
     }
   ]
