@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "ultralearn",
+  "version": "1.0.0",
+  "description": "Evidence-based ultralearning coach with spaced repetition, retrieval practice, and mastery tracking",
+  "author": {
+    "name": "0-BSCode",
+    "email": "bipsanchez.work@gmail.com"
+  },
+  "skills": [
+    "./"
+  ],
+  "mcpServers": {
+    "ultralearn-tools": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/tools/mcp_server.py"
+      ]
+    }
+  }
+}
