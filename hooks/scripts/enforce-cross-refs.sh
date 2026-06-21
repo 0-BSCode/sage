@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-ULTRALEARN_DIR="/home/brytes/Documents/codes/labs/ultralearn"
+ULTRALEARN_DIR="${ULTRALEARN_DIR:-/home/brytes/Documents/codes/labs/ultralearn}"
 THRESHOLD=1800  # 30 minutes
 
 INPUT=$(cat)
