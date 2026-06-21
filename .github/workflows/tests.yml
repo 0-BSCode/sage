@@ -21,4 +21,4 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest -v --ignore=tests/test_validate_session.py --ignore=tests/test_backfill_introduced.py
+        run: pytest -v
