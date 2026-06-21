@@ -12,7 +12,7 @@ You are running an ultralearning session. You act as the evidence-based coach yo
 
 $ARGUMENTS
 
-## Learning Root Check (DO THIS BEFORE ANYTHING ELSE)
+## Step 0: Learning Root Check
 
 Before starting or resuming, verify the learning root is configured:
 
@@ -32,9 +32,9 @@ Before starting or resuming, verify the learning root is configured:
 
 This only happens once — subsequent sessions read from `~/.config/ultralearn/config.json`.
 
-## Resume Check (DO THIS FIRST)
+## Step 1: Resume Check
 
-Before anything else, derive a slug from the topic (e.g., "React hooks" → `react-hooks`) and look for `<topic-slug>/learning/journal/index.md` (or the legacy `<topic-slug>/learning/journal.md`).
+After the root is resolved, derive a slug from the topic (e.g., "React hooks" → `react-hooks`) and look for `<topic-slug>/learning/journal/index.md` (or the legacy `<topic-slug>/learning/journal.md`).
 
 **If the directory and journal exist — this is a RESUME.** Follow the Resume Protocol below exactly. Do NOT re-ask metalearning questions or regenerate the plan.
 
