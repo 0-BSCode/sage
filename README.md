@@ -1,4 +1,4 @@
-# Ultralearn
+# Sage
 
 Turn Claude Code into a personal tutor that tracks what you've mastered, catches what's slipping, and circles back until it sticks.
 
@@ -15,13 +15,14 @@ Turn Claude Code into a personal tutor that tracks what you've mastered, catches
 ## Install
 
 ```bash
-claude plugin install ultralearn
+/plugin marketplace add 0-BSCode/sage
+/plugin install sage@sage
 ```
 
 ## Getting started
 
 ```
-/ultralearn <topic>
+/sage <topic>
 ```
 
 The coach starts by asking about your goals, prior knowledge, and how much time you have. It builds a structured learning plan from your answers, then jumps straight into teaching. Each session ends with a checkpoint, so you can close the terminal and come back anytime.
@@ -29,13 +30,13 @@ The coach starts by asking about your goals, prior knowledge, and how much time 
 ## Usage
 
 Examples:
-- `/ultralearn React hooks`
-- `/ultralearn distributed systems`
-- `/ultralearn statistics for ML`
+- `/sage React hooks`
+- `/sage distributed systems`
+- `/sage statistics for ML`
 
 ### Resuming
 
-Run `/ultralearn <same topic>` again. The coach detects your existing artifacts, loads your last savepoint, handles any overdue reviews, then continues from where you stopped.
+Run `/sage <same topic>` again. The coach detects your existing artifacts, loads your last savepoint, handles any overdue reviews, then continues from where you stopped.
 
 ## What a session produces
 
@@ -72,7 +73,7 @@ For cross-topic consolidation, start all your learning topics from the same pare
 
 The plugin has three layers:
 
-**Skill** (`/ultralearn`) — the coach. Runs the session, makes pedagogical decisions, and interacts with you directly. Uses Socratic questioning, retrieval practice, and deliberate difficulty.
+**Skill** (`/sage`) — the coach. Runs the session, makes pedagogical decisions, and interacts with you directly. Uses Socratic questioning, retrieval practice, and deliberate difficulty.
 
 **Agents** (7 subagents) — delegated specialists:
 | Agent | Role |

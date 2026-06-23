@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic plateau detector for the ultralearning system.
+"""Deterministic plateau detector for the Sage system.
 
 Analyzes learning artifacts to detect learning plateaus and recommend
 session mode changes. Outputs JSON to stdout.
@@ -477,7 +477,7 @@ def run_detection(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Deterministic plateau detector for ultralearning"
+        description="Deterministic plateau detector for Sage"
     )
     parser.add_argument(
         "--journal-dir", required=True,
