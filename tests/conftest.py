@@ -1,4 +1,4 @@
-"""Shared pytest configuration and fixtures for ultralearn tests."""
+"""Shared pytest configuration and fixtures for sage tests."""
 
 import sys
 from pathlib import Path

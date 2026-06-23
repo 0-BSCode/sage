@@ -21,7 +21,7 @@ SCRIPT = str(
 class TestEnforceCrossRefs(unittest.TestCase):
     """Test the Stop enforce-cross-refs hook via subprocess.
 
-    Uses ULTRALEARN_DIR env var override so tests run against a temp
+    Uses SAGE_DIR env var override so tests run against a temp
     directory instead of the hardcoded path.
     """
 
@@ -35,7 +35,7 @@ class TestEnforceCrossRefs(unittest.TestCase):
 
     def _run(self, input_json: dict) -> subprocess.CompletedProcess:
         env = os.environ.copy()
-        env["ULTRALEARN_DIR"] = self.tmpdir
+        env["SAGE_DIR"] = self.tmpdir
         return subprocess.run(
             ["bash", SCRIPT],
             input=json.dumps(input_json),
@@ -60,9 +60,9 @@ class TestEnforceCrossRefs(unittest.TestCase):
             os.utime(path, (mtime, mtime))
 
     # ------------------------------------------------------------------
-    # Not in ultralearn repo -- exits 0
+    # Not in sage repo -- exits 0
     # ------------------------------------------------------------------
-    def test_not_in_ultralearn_repo_exits_zero(self):
+    def test_not_in_sage_repo_exits_zero(self):
         inp = self._base_input("/some/other/project")
         result = self._run(inp)
         self.assertEqual(result.returncode, 0)
@@ -153,7 +153,7 @@ class TestEnforceCrossRefs(unittest.TestCase):
         self.assertNotIn("block", result.stdout)
 
     # ------------------------------------------------------------------
-    # Subdirectory of ultralearn still triggers
+    # Subdirectory of sage still triggers
     # ------------------------------------------------------------------
     def test_subdirectory_triggers(self):
         now = time.time()

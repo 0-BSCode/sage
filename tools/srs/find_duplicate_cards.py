@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scan ultralearning decks for strict question-text duplicates.
+"""Scan Sage decks for strict question-text duplicates.
 
 Walks all `learning/cards.md` files under a configurable root and reports
 groups of cards that share the same normalized question text. Read-only —
@@ -100,7 +100,7 @@ def main() -> None:
     default_root = get_learning_root()
 
     parser = argparse.ArgumentParser(
-        description="Scan ultralearning decks for strict question-text duplicates."
+        description="Scan Sage decks for strict question-text duplicates."
     )
     parser.add_argument(
         "--root",
@@ -114,7 +114,7 @@ def main() -> None:
     if args.root is None:
         print(
             "Error: no learning root configured. "
-            "Pass --root or set ULTRALEARN_LEARNING_ROOT.",
+            "Pass --root or set SAGE_LEARNING_ROOT.",
             file=sys.stderr,
         )
         sys.exit(1)

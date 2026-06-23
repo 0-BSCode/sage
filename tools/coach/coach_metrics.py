@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coach effectiveness metrics for the ultralearning system.
+"""Coach effectiveness metrics for the Sage system.
 
 Computes 4 core metrics from learning artifacts:
   1. Time-to-solid (avg sessions from introduced → solid)

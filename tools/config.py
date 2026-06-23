@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Ultralearn config reader.
+"""Sage config reader.
 
 Resolves the learning root path with this precedence:
-    ULTRALEARN_LEARNING_ROOT env var > ~/.config/ultralearn/config.json > None
+    SAGE_LEARNING_ROOT env var > ~/.config/sage/config.json > None
 
 When run as a script, prints the learning root path (or exits silently if unset).
 
@@ -14,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-CONFIG_DIR = Path.home() / ".config" / "ultralearn"
+CONFIG_DIR = Path.home() / ".config" / "sage"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 
 
@@ -42,7 +42,7 @@ def save_config(learning_root):
 
 def get_learning_root():
     """Resolve the learning root. Returns a Path or None."""
-    env_val = os.environ.get("ULTRALEARN_LEARNING_ROOT")
+    env_val = os.environ.get("SAGE_LEARNING_ROOT")
     if env_val:
         return Path(env_val)
 

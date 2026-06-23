@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assessment Engine — Adaptive question bank management for ultralearning.
+"""Assessment Engine — Adaptive question bank management for Sage.
 
 Manages a per-topic question bank (questions.json), implements adaptive
 selection based on concept mastery and learner performance, records results,
@@ -769,7 +769,7 @@ def cmd_calibrate(args: argparse.Namespace) -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="assessment_engine",
-        description="Adaptive Assessment Engine for Ultralearning",
+        description="Adaptive Assessment Engine for Sage",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

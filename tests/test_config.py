@@ -12,11 +12,11 @@ TOOL_PATH = str(Path(__file__).resolve().parent.parent / "tools" / "config.py")
 
 
 class TestConfigCLIWithEnvVar(unittest.TestCase):
-    """ULTRALEARN_LEARNING_ROOT env var takes highest precedence."""
+    """SAGE_LEARNING_ROOT env var takes highest precedence."""
 
     def test_env_var_printed(self):
         env = os.environ.copy()
-        env["ULTRALEARN_LEARNING_ROOT"] = "/tmp/my-learning-root"
+        env["SAGE_LEARNING_ROOT"] = "/tmp/my-learning-root"
         result = subprocess.run(
             ["python3", TOOL_PATH],
             capture_output=True, text=True, env=env,
@@ -26,7 +26,7 @@ class TestConfigCLIWithEnvVar(unittest.TestCase):
 
     def test_env_var_overrides_config_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".config" / "ultralearn"
+            config_dir = Path(tmpdir) / ".config" / "sage"
             config_dir.mkdir(parents=True)
             config_file = config_dir / "config.json"
             config_file.write_text(json.dumps({
@@ -35,7 +35,7 @@ class TestConfigCLIWithEnvVar(unittest.TestCase):
             }))
 
             env = os.environ.copy()
-            env["ULTRALEARN_LEARNING_ROOT"] = "/from/env"
+            env["SAGE_LEARNING_ROOT"] = "/from/env"
             env["HOME"] = tmpdir
             result = subprocess.run(
                 ["python3", TOOL_PATH],
@@ -50,23 +50,23 @@ class TestConfigCLIWithConfigFile(unittest.TestCase):
 
     def test_config_file_read(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".config" / "ultralearn"
+            config_dir = Path(tmpdir) / ".config" / "sage"
             config_dir.mkdir(parents=True)
             config_file = config_dir / "config.json"
             config_file.write_text(json.dumps({
-                "learning_root": "/home/user/ultralearn",
+                "learning_root": "/home/user/sage",
                 "version": 1,
             }))
 
             env = os.environ.copy()
-            env.pop("ULTRALEARN_LEARNING_ROOT", None)
+            env.pop("SAGE_LEARNING_ROOT", None)
             env["HOME"] = tmpdir
             result = subprocess.run(
                 ["python3", TOOL_PATH],
                 capture_output=True, text=True, env=env,
             )
             self.assertEqual(result.returncode, 0)
-            self.assertEqual(result.stdout.strip(), "/home/user/ultralearn")
+            self.assertEqual(result.stdout.strip(), "/home/user/sage")
 
 
 class TestConfigCLIMissing(unittest.TestCase):
@@ -75,7 +75,7 @@ class TestConfigCLIMissing(unittest.TestCase):
     def test_no_config_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             env = os.environ.copy()
-            env.pop("ULTRALEARN_LEARNING_ROOT", None)
+            env.pop("SAGE_LEARNING_ROOT", None)
             env["HOME"] = tmpdir
             result = subprocess.run(
                 ["python3", TOOL_PATH],
@@ -90,12 +90,12 @@ class TestConfigCLIMalformedFile(unittest.TestCase):
 
     def test_invalid_json_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".config" / "ultralearn"
+            config_dir = Path(tmpdir) / ".config" / "sage"
             config_dir.mkdir(parents=True)
             (config_dir / "config.json").write_text("not json{{{")
 
             env = os.environ.copy()
-            env.pop("ULTRALEARN_LEARNING_ROOT", None)
+            env.pop("SAGE_LEARNING_ROOT", None)
             env["HOME"] = tmpdir
             result = subprocess.run(
                 ["python3", TOOL_PATH],
@@ -105,12 +105,12 @@ class TestConfigCLIMalformedFile(unittest.TestCase):
 
     def test_missing_learning_root_key_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".config" / "ultralearn"
+            config_dir = Path(tmpdir) / ".config" / "sage"
             config_dir.mkdir(parents=True)
             (config_dir / "config.json").write_text(json.dumps({"version": 1}))
 
             env = os.environ.copy()
-            env.pop("ULTRALEARN_LEARNING_ROOT", None)
+            env.pop("SAGE_LEARNING_ROOT", None)
             env["HOME"] = tmpdir
             result = subprocess.run(
                 ["python3", TOOL_PATH],
@@ -136,7 +136,7 @@ save_config('/my/learning/root')
             )
             self.assertEqual(result.returncode, 0)
 
-            config_file = Path(tmpdir) / ".config" / "ultralearn" / "config.json"
+            config_file = Path(tmpdir) / ".config" / "sage" / "config.json"
             self.assertTrue(config_file.exists())
             data = json.loads(config_file.read_text())
             self.assertEqual(data["learning_root"], "/my/learning/root")
@@ -144,7 +144,7 @@ save_config('/my/learning/root')
 
     def test_save_preserves_existing_fields(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".config" / "ultralearn"
+            config_dir = Path(tmpdir) / ".config" / "sage"
             config_dir.mkdir(parents=True)
             (config_dir / "config.json").write_text(json.dumps({
                 "learning_root": "/old/path",

@@ -1,13 +1,13 @@
 #!/bin/bash
 # Stop hook: blocks session end if knowledge maps were modified
 # but cross-reference registry wasn't updated.
-# Only fires when cwd is the ultralearn repo.
+# Only fires when cwd is the sage repo.
 # Supports both sharded cross-refs/ directory and legacy cross-references.md.
 
 set -euo pipefail
 
-ULTRALEARN_DIR="${ULTRALEARN_DIR:-$(cat /tmp/.ultralearn-learning-root 2>/dev/null)}"
-if [ -z "$ULTRALEARN_DIR" ]; then
+SAGE_DIR="${SAGE_DIR:-$(cat /tmp/.sage-learning-root 2>/dev/null)}"
+if [ -z "$SAGE_DIR" ]; then
   exit 0
 fi
 THRESHOLD=1800  # 30 minutes
@@ -21,13 +21,13 @@ if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
   exit 0
 fi
 
-# Only fire in the ultralearn repo (or a subdirectory)
-if [[ "$CWD" != "$ULTRALEARN_DIR"* ]]; then
+# Only fire in the sage repo (or a subdirectory)
+if [[ "$CWD" != "$SAGE_DIR"* ]]; then
   exit 0
 fi
 
-CROSS_REFS_DIR="${ULTRALEARN_DIR}/cross-refs"
-CR_FILE="${ULTRALEARN_DIR}/cross-references.md"
+CROSS_REFS_DIR="${SAGE_DIR}/cross-refs"
+CR_FILE="${SAGE_DIR}/cross-references.md"
 
 NOW=$(date +%s)
 
@@ -40,7 +40,7 @@ while IFS= read -r km; do
     KM_MODIFIED=true
     break
   fi
-done < <(find "$ULTRALEARN_DIR" -name "knowledge-map.md" 2>/dev/null)
+done < <(find "$SAGE_DIR" -name "knowledge-map.md" 2>/dev/null)
 
 if [ "$KM_MODIFIED" != "true" ]; then
   exit 0

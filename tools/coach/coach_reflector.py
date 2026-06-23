@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coach self-reflection tool for the ultralearning system.
+"""Coach self-reflection tool for the Sage system.
 
 Analyzes coach error patterns and evaluates behavioral insight effectiveness.
 
