@@ -1,7 +1,8 @@
 #!/bin/bash
 # SubagentStop hook: extracts token usage from a subagent's transcript
-# JSONL and appends to the project's learning/logs/ directory.
-# Falls back to $HOME/.claude/logs/ if no learning/ directory exists.
+# JSONL and appends to <learning-root>/logs/subagent-tokens.jsonl.
+# Learning root is read from /tmp/.sage-learning-root (set by SessionStart hook).
+# Falls back to $HOME/.claude/logs/ if learning root is unavailable.
 
 set -euo pipefail
 
@@ -16,9 +17,10 @@ if [[ -z "$TRANSCRIPT" || ! -f "$TRANSCRIPT" ]]; then
   exit 0
 fi
 
-# Route logs to project's learning/logs/ or global fallback
-if [[ -n "${CLAUDE_PROJECT_DIR:-}" && -d "$CLAUDE_PROJECT_DIR/learning" ]]; then
-  LOG_DIR="$CLAUDE_PROJECT_DIR/learning/logs"
+# Route logs to learning root (from sage config) or global fallback
+SAGE_LEARNING_ROOT=$(cat /tmp/.sage-learning-root 2>/dev/null)
+if [[ -n "$SAGE_LEARNING_ROOT" && -d "$SAGE_LEARNING_ROOT" ]]; then
+  LOG_DIR="$SAGE_LEARNING_ROOT/logs"
 else
   LOG_DIR="$HOME/.claude/logs"
 fi
