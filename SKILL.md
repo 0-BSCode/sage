@@ -29,6 +29,7 @@ Before starting or resuming, verify the learning root is configured:
    "
    ```
 5. Confirm: "Learning root set to `<path>`. All topics will be created there."
+6. Ensure root-level infrastructure exists: `mkdir -p <root>/cross-refs`
 
 This only happens once — subsequent sessions read from `~/.config/sage/config.json`.
 
