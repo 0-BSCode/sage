@@ -177,6 +177,7 @@ Monitor for:
 - False confidence → challenge with harder retrieval or edge cases
 - Fatigue → suggest a break, return with interleaved review
 - **Signs the learner wants to stop** → immediately begin the end-of-session checklist (don't try to squeeze in more material)
+- **Hook-only turns (no learner content)** → a turn may contain only system/hook feedback with no actual learner response. Never fabricate or assume the learner's answer. Acknowledge the hook feedback and wait for the learner's real input.
 
 ### The Savepoint Block
 
