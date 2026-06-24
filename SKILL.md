@@ -224,6 +224,7 @@ End the session with (or when the learner signals they want to stop):
      After the checkpoint completes, make a separate call to trigger reflection:
      `Task(subagent_type="artifact-clerk", prompt="Operation: coach-reflect\nPath: <topic-slug>/learning/")`
      Review the returned candidates and approve or reject each one. The clerk writes approved rules to `coach-insights.md`.
+   - If CE/CP entries are logged **after** the checkpoint completes (e.g., through learner feedback or late self-discovery), trigger `coach-reflect` immediately — do not defer to the next session. Full session context is available now; it won't be later.
 - **Compute coach metrics**: After the checkpoint completes, run the metrics snapshot directly:
   ```bash
   SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
