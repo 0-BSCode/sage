@@ -22,4 +22,4 @@ Each entry: `HH:MM:SS <hook-name>: <outcome>`.
 
 ## Known Issues
 
-- `reset-verification.sh` matches `subagent_type == "verification-gate"` but namespaced invocations use `"sage:verification-gate"`. Same for `"artifact-clerk"` vs `"sage:artifact-clerk"`. The counter file never gets created, so the verification overdue warning never fires.
+- ~~`reset-verification.sh` matches `subagent_type == "verification-gate"` but namespaced invocations use `"sage:verification-gate"`. Same for `"artifact-clerk"` vs `"sage:artifact-clerk"`. The counter file never gets created, so the verification overdue warning never fires.~~ **Fixed** — now uses glob suffix match (`*"verification-gate"`, `*"artifact-clerk"`).
