@@ -7,6 +7,7 @@
 
 set -euo pipefail
 
+DEBUG_LOG="/tmp/sage-hook-debug.log"
 INPUT=$(cat)
 
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
@@ -34,10 +35,12 @@ if [ "$SUBAGENT_TYPE" = "artifact-clerk" ]; then
 fi
 
 if [ "$SUBAGENT_TYPE" != "verification-gate" ]; then
+  echo "$(date '+%H:%M:%S') reset-verif: skip — subagent_type=$SUBAGENT_TYPE (not verification-gate)" >> "$DEBUG_LOG"
   exit 0
 fi
 
 # Reset the message counter (creates it if first call)
+echo "$(date '+%H:%M:%S') reset-verif: RESET counter (subagent_type=$SUBAGENT_TYPE)" >> "$DEBUG_LOG"
 COUNTER_FILE="/tmp/claude-verif-counter-${SESSION_ID}"
 echo "0" > "$COUNTER_FILE"
 
