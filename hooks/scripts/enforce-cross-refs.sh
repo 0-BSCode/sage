@@ -37,18 +37,28 @@ CR_FILE="${SAGE_DIR}/cross-references.md"
 NOW=$(date +%s)
 
 # Check if any knowledge-map.md was modified within threshold
+# AND has concepts at developing or higher (not just created with all not_started)
 KM_MODIFIED=false
+KM_HAS_PROMOTED=false
 while IFS= read -r km; do
   KM_MTIME=$(stat -c %Y "$km" 2>/dev/null || echo 0)
   KM_AGE=$((NOW - KM_MTIME))
   if [ "$KM_AGE" -lt "$THRESHOLD" ]; then
     KM_MODIFIED=true
+    if grep -qE '\| (developing|solid|mastered) \|' "$km" 2>/dev/null; then
+      KM_HAS_PROMOTED=true
+    fi
     break
   fi
 done < <(find "$SAGE_DIR" -name "knowledge-map.md" 2>/dev/null)
 
 if [ "$KM_MODIFIED" != "true" ]; then
   echo "$(date '+%H:%M:%S') cross-refs: skip — no recent knowledge-map changes" >> "$DEBUG_LOG"
+  exit 0
+fi
+
+if [ "$KM_HAS_PROMOTED" != "true" ]; then
+  echo "$(date '+%H:%M:%S') cross-refs: skip — knowledge-map modified but no concepts at developing+" >> "$DEBUG_LOG"
   exit 0
 fi
 
