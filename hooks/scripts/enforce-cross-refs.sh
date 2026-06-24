@@ -6,8 +6,11 @@
 
 set -euo pipefail
 
+DEBUG_LOG="/tmp/sage-hook-debug.log"
+
 SAGE_DIR="${SAGE_DIR:-$(cat /tmp/.sage-learning-root 2>/dev/null)}"
 if [ -z "$SAGE_DIR" ]; then
+  echo "$(date '+%H:%M:%S') cross-refs: skip — no SAGE_DIR" >> "$DEBUG_LOG"
   exit 0
 fi
 THRESHOLD=1800  # 30 minutes
@@ -18,11 +21,13 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // ""')
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active')
 
 if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
+  echo "$(date '+%H:%M:%S') cross-refs: skip — stop_hook_active" >> "$DEBUG_LOG"
   exit 0
 fi
 
 # Only fire in the sage repo (or a subdirectory)
 if [[ "$CWD" != "$SAGE_DIR"* ]]; then
+  echo "$(date '+%H:%M:%S') cross-refs: skip — cwd=$CWD not in SAGE_DIR=$SAGE_DIR" >> "$DEBUG_LOG"
   exit 0
 fi
 
@@ -43,6 +48,7 @@ while IFS= read -r km; do
 done < <(find "$SAGE_DIR" -name "knowledge-map.md" 2>/dev/null)
 
 if [ "$KM_MODIFIED" != "true" ]; then
+  echo "$(date '+%H:%M:%S') cross-refs: skip — no recent knowledge-map changes" >> "$DEBUG_LOG"
   exit 0
 fi
 
@@ -70,12 +76,15 @@ fi
 
 # Knowledge map modified but cross-references weren't — block
 if [ "$CR_UPDATED" != "true" ]; then
+  echo "$(date '+%H:%M:%S') cross-refs: BLOCK — km modified, cross-refs not updated" >> "$DEBUG_LOG"
   cat <<'EOF'
 {
   "decision": "block",
   "reason": "Knowledge map(s) were modified this session but cross-refs/ was not updated. Per CLAUDE.md Cross-Reference Protocol: upsert any concept that reached Developing or higher into cross-refs/<project>.md before ending the session."
 }
 EOF
+else
+  echo "$(date '+%H:%M:%S') cross-refs: pass — km modified, cross-refs updated" >> "$DEBUG_LOG"
 fi
 
 exit 0

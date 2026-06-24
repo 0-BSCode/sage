@@ -29,6 +29,7 @@ Before starting or resuming, verify the learning root is configured:
    "
    ```
 5. Confirm: "Learning root set to `<path>`. All topics will be created there."
+6. Ensure root-level infrastructure exists: `mkdir -p <root>/cross-refs`
 
 This only happens once — subsequent sessions read from `~/.config/sage/config.json`.
 
@@ -147,7 +148,7 @@ Start the session with:
 
 1. **Retrieval Warm-up** (if they have any prior knowledge): "Before we dive in, write down everything you already know about [topic]. No peeking at resources — just retrieve from memory."
 
-2. **Verify Before Teaching**: Before introducing each new concept, batch the key factual claims you plan to teach and run them through the verification gate:
+2. **Verify Before Teaching (recurring per plan concept)**: Before introducing each new concept, batch the key factual claims you plan to teach and run them through the verification gate:
    ```
    Task(subagent_type="verification-gate", prompt="Operation: verify-claims\nTopic: [topic]\n\nClaims:\n1. [claim you plan to teach]\n2. [API behavior / syntax / definition]\n...")
    ```
@@ -156,6 +157,8 @@ Start the session with:
    Task(subagent_type="verification-gate", prompt="Operation: verify-code\nLanguage: [lang]\nExpected behavior: [what it should do]\n\nCode:\n```[lang]\n[code]\n```")
    ```
    Incorporate corrections before presenting anything. If a claim comes back `unverified`, either find the answer yourself or tell the learner honestly: "I'm not certain about this detail — let's look it up together."
+
+   **This step recurs.** Consult `plan.md` to identify the next concept in your current milestone. Each time you advance to a new concept, run a new verification batch for that concept's claims before teaching it. A pre-session or pre-plan batch does not exempt you — it covered what you planned to teach, not what the conversation actually reaches. The message-counter hook (Layer 2) catches ad-hoc tangents between plan concepts.
 
 3. **Socratic Introduction**: Introduce the verified concept using questions, not lectures:
    - Ask guiding questions to activate prior knowledge
@@ -221,6 +224,7 @@ End the session with (or when the learner signals they want to stop):
      After the checkpoint completes, make a separate call to trigger reflection:
      `Task(subagent_type="artifact-clerk", prompt="Operation: coach-reflect\nPath: <topic-slug>/learning/")`
      Review the returned candidates and approve or reject each one. The clerk writes approved rules to `coach-insights.md`.
+   - If CE/CP entries are logged **after** the checkpoint completes (e.g., through learner feedback or late self-discovery), trigger `coach-reflect` immediately — do not defer to the next session. Full session context is available now; it won't be later.
 - **Compute coach metrics**: After the checkpoint completes, run the metrics snapshot directly:
   ```bash
   SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
@@ -332,7 +336,7 @@ If you plan to show a code example, verify it too:
 Task(subagent_type="verification-gate", prompt="Operation: verify-code\nLanguage: [lang]\nExpected behavior: [what it should do]\n\nCode:\n```[lang]\n[code]\n```")
 ```
 
-**What counts as a "topic section":** Any shift to a new concept, sub-topic, or exercise that wasn't covered in the previous verification batch. When in doubt, verify. The cost of an extra gate call is far lower than teaching wrong information.
+**What counts as a "topic section":** Any shift to a new concept, sub-topic, or exercise that wasn't covered in the previous verification batch. Consult `plan.md` — each concept listed in the current milestone is a topic section boundary. When in doubt, verify. The cost of an extra gate call is far lower than teaching wrong information. A pre-session or pre-plan verification batch does NOT exempt you from topic-section gates — each concept transition gets its own gate call.
 
 **Socratic teaching does NOT exempt you from verification.** Guiding a learner to discover a fact via questions is still teaching that fact. If your Socratic questions are leading toward a specific conclusion, that conclusion must be verified before you start the Q&A sequence.
 

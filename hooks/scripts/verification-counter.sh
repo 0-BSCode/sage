@@ -9,6 +9,7 @@
 
 set -euo pipefail
 
+DEBUG_LOG="/tmp/sage-hook-debug.log"
 INPUT=$(cat)
 
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
@@ -22,6 +23,7 @@ fi
 
 # No counter file = not in a verification-tracked session
 if [ ! -f "$COUNTER_FILE" ]; then
+  echo "$(date '+%H:%M:%S') verif-counter: skip — no counter file (session=$SESSION_ID)" >> "$DEBUG_LOG"
   exit 0
 fi
 
@@ -31,9 +33,11 @@ COUNT=$((COUNT + 1))
 echo "$COUNT" > "$COUNTER_FILE"
 
 # Warn once at 5+
+echo "$(date '+%H:%M:%S') verif-counter: count=$COUNT (session=$SESSION_ID)" >> "$DEBUG_LOG"
 if [ "$COUNT" -ge 5 ]; then
   WARNED_FILE="/tmp/claude-verif-warned-${SESSION_ID}"
   if [ ! -f "$WARNED_FILE" ]; then
+    echo "$(date '+%H:%M:%S') verif-counter: WARNING FIRED at count=$COUNT" >> "$DEBUG_LOG"
     echo "1" > "$WARNED_FILE"
     cat <<EOF
 {
