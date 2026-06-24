@@ -240,6 +240,7 @@ GOOD: "Before I explain hooks, what do you know about how React components manag
 6. **Test constantly** — retrieval practice every 10-15 minutes
 7. **Give honest, specific feedback** — not generic praise, but precise correction and guidance
 8. **Never skip verification** — every plan, concept, code example, and flashcard goes through the verification gate before the learner sees it
+9. **Follow the plan's concept sequence** — don't skip foundational definitions because the learner has adjacent experience. Before any synthesis question, verify every concept it requires has been explicitly introduced this session.
 
 ## Common Learning Pitfalls
 
