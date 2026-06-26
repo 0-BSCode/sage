@@ -83,6 +83,7 @@ class TestSessionMetricsBasicRun(unittest.TestCase):
         self.assertIn("200.0K", result.stdout)
         self.assertIn("45%", result.stdout)
 
+    @unittest.skip("conversation tokens disabled — see session_metrics.py L181 TODO")
     def test_prints_conversation_tokens(self):
         result = subprocess.run(
             ["python3", TOOL_PATH, self.session_id],

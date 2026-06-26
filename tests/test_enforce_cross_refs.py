@@ -52,10 +52,10 @@ class TestEnforceCrossRefs(unittest.TestCase):
             "session_id": self.session_id,
         }
 
-    def _touch(self, path: str, mtime: float | None = None):
+    def _touch(self, path: str, content: str = "", mtime: float | None = None):
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text("")
+        p.write_text(content)
         if mtime is not None:
             os.utime(path, (mtime, mtime))
 
@@ -105,7 +105,7 @@ class TestEnforceCrossRefs(unittest.TestCase):
     def test_kmap_modified_crossrefs_stale_blocks(self):
         now = time.time()
         kmap = os.path.join(self.tmpdir, "knowledge-map.md")
-        self._touch(kmap, mtime=now)
+        self._touch(kmap, content="| Concept | Status |\n| Test concept | developing |\n", mtime=now)
 
         cr_dir = os.path.join(self.tmpdir, "cross-refs")
         os.makedirs(cr_dir, exist_ok=True)
@@ -161,7 +161,7 @@ class TestEnforceCrossRefs(unittest.TestCase):
         os.makedirs(sub, exist_ok=True)
 
         kmap = os.path.join(self.tmpdir, "knowledge-map.md")
-        self._touch(kmap, mtime=now)
+        self._touch(kmap, content="| Concept | Status |\n| Test concept | solid |\n", mtime=now)
 
         inp = self._base_input(sub)
         result = self._run(inp)
@@ -174,7 +174,7 @@ class TestEnforceCrossRefs(unittest.TestCase):
     def test_kmap_modified_no_crossrefs_blocks(self):
         now = time.time()
         kmap = os.path.join(self.tmpdir, "knowledge-map.md")
-        self._touch(kmap, mtime=now)
+        self._touch(kmap, content="| Concept | Status |\n| Test concept | mastered |\n", mtime=now)
 
         inp = self._base_input(self.tmpdir)
         result = self._run(inp)

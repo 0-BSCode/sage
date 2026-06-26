@@ -21,16 +21,37 @@ SCRIPT = str(
 class TestTrackSubagent(unittest.TestCase):
     """Test the SubagentStop track-subagent hook via subprocess."""
 
+    LEARNING_ROOT_FILE = "/tmp/.sage-learning-root"
+
     def setUp(self):
         self.session_id = f"test-{uuid.uuid4().hex[:8]}"
         self.tmpdir = tempfile.mkdtemp()
         self.transcript_path = os.path.join(self.tmpdir, "transcript.jsonl")
         # Fallback log dir under a controlled HOME
         self.fake_home = tempfile.mkdtemp()
+        # Save and clear real learning root file to isolate tests
+        self._saved_learning_root = None
+        if os.path.exists(self.LEARNING_ROOT_FILE):
+            with open(self.LEARNING_ROOT_FILE) as f:
+                self._saved_learning_root = f.read()
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
         shutil.rmtree(self.fake_home, ignore_errors=True)
+        # Restore learning root file
+        if self._saved_learning_root is not None:
+            with open(self.LEARNING_ROOT_FILE, "w") as f:
+                f.write(self._saved_learning_root)
+        elif os.path.exists(self.LEARNING_ROOT_FILE):
+            os.remove(self.LEARNING_ROOT_FILE)
+
+    def _set_learning_root(self, path: str):
+        with open(self.LEARNING_ROOT_FILE, "w") as f:
+            f.write(path)
+
+    def _clear_learning_root(self):
+        if os.path.exists(self.LEARNING_ROOT_FILE):
+            os.remove(self.LEARNING_ROOT_FILE)
 
     def _write_transcript(self, entries: list[dict]):
         """Write JSONL transcript file."""
@@ -102,17 +123,17 @@ class TestTrackSubagent(unittest.TestCase):
     # ------------------------------------------------------------------
     # 1. Writes token data to learning/logs/ when it exists
     # ------------------------------------------------------------------
-    def test_writes_to_project_learning_logs(self):
-        project_dir = os.path.join(self.tmpdir, "project")
-        learning_dir = os.path.join(project_dir, "learning")
-        os.makedirs(learning_dir)
+    def test_writes_to_learning_root_logs(self):
+        learning_root = os.path.join(self.tmpdir, "learning-root")
+        os.makedirs(learning_root)
+        self._set_learning_root(learning_root)
 
         self._write_transcript(self._sample_transcript())
 
         inp = self._base_input()
-        self._run(inp, env_extra={"CLAUDE_PROJECT_DIR": project_dir})
+        self._run(inp)
 
-        log_file = os.path.join(learning_dir, "logs", "subagent-tokens.jsonl")
+        log_file = os.path.join(learning_root, "logs", "subagent-tokens.jsonl")
         self.assertTrue(os.path.exists(log_file), "Log file should be created")
 
         with open(log_file) as f:
@@ -132,10 +153,10 @@ class TestTrackSubagent(unittest.TestCase):
     # 2. Falls back to global logs when no learning directory
     # ------------------------------------------------------------------
     def test_falls_back_to_global_logs(self):
+        self._clear_learning_root()
         self._write_transcript(self._sample_transcript())
 
         inp = self._base_input()
-        # No CLAUDE_PROJECT_DIR set
         self._run(inp)
 
         log_file = os.path.join(self.fake_home, ".claude", "logs", "subagent-tokens.jsonl")
@@ -167,19 +188,18 @@ class TestTrackSubagent(unittest.TestCase):
     # 5. Appends (not overwrites) on repeated calls
     # ------------------------------------------------------------------
     def test_appends_on_repeated_calls(self):
-        project_dir = os.path.join(self.tmpdir, "project")
-        learning_dir = os.path.join(project_dir, "learning")
-        os.makedirs(learning_dir)
+        learning_root = os.path.join(self.tmpdir, "learning-root")
+        os.makedirs(learning_root)
+        self._set_learning_root(learning_root)
 
         self._write_transcript(self._sample_transcript())
 
         inp = self._base_input()
-        env = {"CLAUDE_PROJECT_DIR": project_dir}
 
-        self._run(inp, env_extra=env)
-        self._run(inp, env_extra=env)
+        self._run(inp)
+        self._run(inp)
 
-        log_file = os.path.join(learning_dir, "logs", "subagent-tokens.jsonl")
+        log_file = os.path.join(learning_root, "logs", "subagent-tokens.jsonl")
         with open(log_file) as f:
             lines = f.readlines()
         self.assertEqual(len(lines), 2)
@@ -192,28 +212,25 @@ class TestTrackSubagent(unittest.TestCase):
             {"type": "human", "message": {"content": "Hello"}},
         ])
 
-        project_dir = os.path.join(self.tmpdir, "project")
-        learning_dir = os.path.join(project_dir, "learning")
-        os.makedirs(learning_dir)
+        learning_root = os.path.join(self.tmpdir, "learning-root")
+        os.makedirs(learning_root)
+        self._set_learning_root(learning_root)
 
         inp = self._base_input()
-        result = self._run(inp, env_extra={"CLAUDE_PROJECT_DIR": project_dir})
+        result = self._run(inp)
 
-        # Should still exit 0 (jq handles empty selections)
         self.assertEqual(result.returncode, 0)
 
     # ------------------------------------------------------------------
     # 7. CLAUDE_PROJECT_DIR set but no learning/ subdir -- uses fallback
     # ------------------------------------------------------------------
-    def test_project_dir_without_learning_uses_fallback(self):
-        project_dir = os.path.join(self.tmpdir, "project-no-learning")
-        os.makedirs(project_dir)
-        # No learning/ subdir
+    def test_no_learning_root_uses_fallback(self):
+        self._clear_learning_root()
 
         self._write_transcript(self._sample_transcript())
 
         inp = self._base_input()
-        self._run(inp, env_extra={"CLAUDE_PROJECT_DIR": project_dir})
+        self._run(inp)
 
         fallback_log = os.path.join(
             self.fake_home, ".claude", "logs", "subagent-tokens.jsonl"

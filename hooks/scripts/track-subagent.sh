@@ -18,7 +18,7 @@ if [[ -z "$TRANSCRIPT" || ! -f "$TRANSCRIPT" ]]; then
 fi
 
 # Route logs to learning root (from sage config) or global fallback
-SAGE_LEARNING_ROOT=$(cat /tmp/.sage-learning-root 2>/dev/null)
+SAGE_LEARNING_ROOT=$(cat /tmp/.sage-learning-root 2>/dev/null || true)
 if [[ -n "$SAGE_LEARNING_ROOT" && -d "$SAGE_LEARNING_ROOT" ]]; then
   LOG_DIR="$SAGE_LEARNING_ROOT/logs"
 else
@@ -29,13 +29,19 @@ LOG_FILE="$LOG_DIR/subagent-tokens.jsonl"
 
 USAGE=$(jq -s '
   [ .[] | select(.type == "assistant") | .message.usage // empty ]
-  | {
+  | if length == 0 then null
+    else {
       input_tokens: (map(.input_tokens // 0) | add),
       output_tokens: (map(.output_tokens // 0) | add),
       cache_creation_tokens: (map(.cache_creation_input_tokens // 0) | add),
       cache_read_tokens: (map(.cache_read_input_tokens // 0) | add)
     }
+    end
 ' "$TRANSCRIPT")
+
+if [[ "$USAGE" == "null" ]]; then
+  exit 0
+fi
 
 echo "$USAGE" | jq -c \
   --arg agent_type "$AGENT_TYPE" \
