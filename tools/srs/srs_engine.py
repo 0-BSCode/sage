@@ -7,7 +7,7 @@ Reads cards.md, writes scheduling state to cards.srs.json sidecar.
 Commands:
     init <path>                     Create cards.srs.json from cards.md
     sync <path>                     Add new cards, detect retired/edited
-    due <path> [--date YYYY-MM-DD]  List cards due for review
+    due <path> [--date YYYY-MM-DD] [--limit N] [--sort risk]  List cards due for review
     grade <path> <card-id> <q>      Grade a card (0-5), update schedule [--date YYYY-MM-DD]
     stats <path>                    Aggregate statistics
     forecast <path> [--days N]      What's due each day for next N days
@@ -534,8 +534,15 @@ def cmd_due(args: argparse.Namespace) -> str:
         if card["next_review"] <= check_date:
             due_cards.append((cid, card))
 
-    # Sort: overdue first (oldest), then new
-    due_cards.sort(key=lambda x: (x[1]["status"] == "new", x[1]["next_review"]))
+    # Sort
+    if getattr(args, "sort", None) == "risk":
+        due_cards.sort(key=lambda x: (x[1].get("easiness_factor", 2.5), -x[1].get("lapses", 0)))
+    else:
+        due_cards.sort(key=lambda x: (x[1]["status"] == "new", x[1]["next_review"]))
+
+    # Limit
+    if getattr(args, "limit", None):
+        due_cards = due_cards[:args.limit]
 
     if args.json:
         return JsonFormatter.output({
@@ -660,6 +667,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_due = subparsers.add_parser("due", help="List cards due for review")
     p_due.add_argument("path", help="Path to cards.md or its parent directory")
     p_due.add_argument("--date", default=None, help="Check date (YYYY-MM-DD), defaults to today")
+    p_due.add_argument("--limit", type=int, default=None, help="Return only top N cards")
+    p_due.add_argument("--sort", choices=["default", "risk"], default="default", help="Sort order: default (oldest overdue) or risk (lowest EF, most lapses)")
     p_due.add_argument("--json", action="store_true", help="Output as JSON")
 
     # grade

@@ -28,8 +28,10 @@ A capstone project is the terminal artifact of a learning journey — a real, bu
 ## File Location
 
 ```
-<topic-slug>/learning/capstone.md
+<topic-slug>/capstone/capstone.md
 ```
+
+Build artifacts (code, skill files, configs) go under `<topic-slug>/capstone/<project-name>/`. The `capstone/` directory is a sibling to `learning/`, not nested inside it.
 
 ## Operations
 
@@ -259,14 +261,15 @@ For each decision:
 
 ### Step 3: Write the file
 
-Write the spec to `<topic-slug>/learning/capstone.md`. If the file already exists, overwrite it (the coach has already confirmed with the learner).
+Write the spec to `<topic-slug>/capstone/capstone.md`. Create the `capstone/` directory if it doesn't exist. If the file already exists, overwrite it (the coach has already confirmed with the learner).
 
 ### Step 4: Return confirmation
 
 ```markdown
 ## Capstone Spec Written
 
-- **File:** <topic-slug>/learning/capstone.md
+- **File:** <topic-slug>/capstone/capstone.md
+- **Build directory:** <topic-slug>/capstone/<project-name>/
 - **Project:** [title]
 - **Phases:** [N]
 - **Concepts exercised:** [N] of [M] solid/mastered

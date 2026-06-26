@@ -22,18 +22,31 @@ def find_metrics_file(session_id=""):
 
 
 def find_subagent_log(learning_path="", project_dir=""):
-    candidates = [learning_path, project_dir, os.environ.get("CLAUDE_PROJECT_DIR", ""), os.getcwd()]
+    sage_root = ""
+    try:
+        with open("/tmp/.sage-learning-root") as f:
+            sage_root = f.read().strip()
+    except OSError:
+        pass
+    candidates = [sage_root, learning_path, project_dir, os.environ.get("CLAUDE_PROJECT_DIR", ""), os.getcwd()]
     for d in candidates:
         if not d:
             continue
-        path = os.path.join(d, "logs", "subagent-tokens.jsonl") if "learning" in d else os.path.join(d, "learning", "logs", "subagent-tokens.jsonl")
+        path = os.path.join(d, "logs", "subagent-tokens.jsonl")
         if os.path.isfile(path):
             return path
+        alt = os.path.join(d, "learning", "logs", "subagent-tokens.jsonl")
+        if os.path.isfile(alt):
+            return alt
+    fallback = os.path.join(os.path.expanduser("~"), ".claude", "logs", "subagent-tokens.jsonl")
+    if os.path.isfile(fallback):
+        return fallback
     return None
 
 
 def parse_subagent_log(path, session_id=""):
     entries = []
+    seen = set()
     with open(path) as f:
         for line in f:
             line = line.strip()
@@ -45,6 +58,11 @@ def parse_subagent_log(path, session_id=""):
                 continue
             if session_id and entry.get("session_id") != session_id:
                 continue
+            dedup_key = (entry.get("agent_type", ""), entry.get("timestamp", ""),
+                         entry.get("input_tokens", 0), entry.get("output_tokens", 0))
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
             entry["fresh"] = (
                 entry.get("input_tokens", 0)
                 + entry.get("output_tokens", 0)
@@ -135,6 +153,9 @@ def run(session_id="", topic_slug="", learning_path=""):
         main = json.load(f)
 
     main_in = main.get("input_tokens", 0)
+    # output_tokens from claude-session-metrics.json is unreliable — it appears
+    # to be overwritten per-turn rather than accumulated, and the per-turn values
+    # are too low to be correct. Do not use for cost tracking or reporting.
     main_out = main.get("output_tokens", 0)
     ctx_size = main.get("context_window_size", 0)
     used_pct = main.get("used_percentage", 0)
@@ -157,7 +178,8 @@ def run(session_id="", topic_slug="", learning_path=""):
     if duration_ms > 0:
         lines.append(f"  Duration:        {fmt_duration(duration_ms)}")
     lines.append(f"  Context window:  {fmt_tokens(ctx_size)} ({used_pct}% used = {main_ctx} tokens)")
-    lines.append(f"  Conversation:    📥 {main_in} in / 📤 {main_out} out")
+    # TODO: get accurate per-session input/output token totals when platform supports it
+    # lines.append(f"  Conversation:    📥 {main_in} in / 📤 {main_out} out")
     lines.append("")
 
     if sub_groups:
@@ -186,7 +208,8 @@ def run(session_id="", topic_slug="", learning_path=""):
         clerk_lines = []
         clerk_lines.append(f"- Duration: {fmt_duration(duration_ms)}")
         clerk_lines.append(f"- Context: {used_pct}% of {fmt_tokens(ctx_size)} ({main_ctx} tokens)")
-        clerk_lines.append(f"- Conversation: 📥 {main_in} in / 📤 {main_out} out")
+        # TODO: get accurate per-session input/output token totals when platform supports it
+        # clerk_lines.append(f"- Conversation: 📥 {main_in} in / 📤 {main_out} out")
         if sub_groups:
             clerk_lines.append(f"- Subagents: {sub_total} fresh")
             for g in sub_groups:
