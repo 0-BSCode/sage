@@ -46,6 +46,7 @@ Verification applies at these points (all use the same protocol above):
    ```
    Apply corrections from `corrected` verdicts. For `flagged` cards, fix or drop — never persist an unverified flashcard. Wrong flashcards are actively harmful because spaced repetition will cement the error.
 6. **Ad-hoc claims:** Any claim not covered by the above batches that arises mid-session gets its own gate call before presenting to the learner.
+7. **Capstone artifact gate:** Before writing any capstone artifact that contains detection rules, operational instructions, or factual claims, run the verification gate on those claims. Translating principles into detection heuristics creates new claims — even if the underlying principle was already verified in a reference doc.
 
 ## Verdict Handling
 

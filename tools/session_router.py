@@ -20,6 +20,45 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
 from config import get_learning_root
 
 
+RESUME_KEYWORDS = {"continue", "resume", "pick", "list"}
+
+
+def is_resume_intent(topic):
+    """Check if topic is a resume keyword rather than a real topic."""
+    return topic.lower().strip() in RESUME_KEYWORDS
+
+
+def list_projects(learning_root):
+    """Scan for existing projects with learning artifacts. Returns list sorted by last session date."""
+    projects = []
+    if not os.path.isdir(learning_root):
+        return projects
+
+    for entry in sorted(os.listdir(learning_root)):
+        project_learning = os.path.join(learning_root, entry, "learning")
+        journal_index = os.path.join(project_learning, "journal", "index.md")
+        if not os.path.isfile(journal_index):
+            continue
+
+        last_date = None
+        try:
+            with open(journal_index, "r") as f:
+                for line in f:
+                    date_match = re.search(r"(\d{4}-\d{2}-\d{2})", line)
+                    if date_match:
+                        last_date = date_match.group(1)
+        except OSError:
+            pass
+
+        projects.append({
+            "slug": entry,
+            "last_session": last_date,
+        })
+
+    projects.sort(key=lambda p: p.get("last_session") or "", reverse=True)
+    return projects
+
+
 def derive_slug(topic):
     """Convert topic name to a filesystem-safe slug."""
     slug = topic.lower().strip()
@@ -42,9 +81,25 @@ def find_journal(topic_path):
 
 def route(sage_root, topic):
     """Resolve session mode and return structured result."""
+    learning_root = get_learning_root()
+
+    if is_resume_intent(topic):
+        if not learning_root:
+            return {
+                "mode": "needs_config",
+                "slug": "",
+                "sage_root": sage_root,
+            }
+        projects = list_projects(str(learning_root))
+        return {
+            "mode": "pick",
+            "projects": projects,
+            "learning_root": str(learning_root),
+            "sage_root": sage_root,
+        }
+
     slug = derive_slug(topic)
 
-    learning_root = get_learning_root()
     if not learning_root:
         return {
             "mode": "needs_config",

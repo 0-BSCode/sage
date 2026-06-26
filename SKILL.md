@@ -21,6 +21,7 @@ python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
 ```
 
 - If `mode` is `needs_config`: ask the learner where to store projects, save via `save_config()`, run `mkdir -p <root>/cross-refs`, then re-run the router.
+- If `mode` is `pick`: the learner used a resume keyword (e.g., "continue", "resume"). Present the `projects` list from the router output (sorted by most recent session). Ask the learner to pick one. Then re-run the router with the selected slug — it will return `mode: "resume"`.
 - If `mode` is `fresh`: create the `<topic_path>` directory, read eager-load references, continue with Phase 1.
 - If `mode` is `resume`: read eager-load references, follow Resume Protocol.
 
@@ -78,6 +79,7 @@ When resuming a learning journey in progress, follow this protocol exactly:
    ```
    Task(subagent_type="assessment-agent", prompt="Operation: select-and-prepare\nPath: <topic-slug>/learning/\n\nSession context: [topics from savepoint]\nCount: 2-3")
    ```
+   **Exemption:** If overdue SRS cards exceed 20, skip the assessment warm-up — SRS triage replaces it. The overdue card reviews serve as retrieval practice. Note the substitution in session notes.
 
 7. **Start with retrieval practice on previous material** — this is both a learning technique AND a diagnostic. How much they retained tells you whether to review or advance.
 
@@ -248,6 +250,13 @@ SM-2 spaced repetition scheduler. Resolve path with `SAGE_ROOT=$(cat /tmp/.sage-
 ## Plateau Detector
 
 The clerk runs the plateau detector during the brief and includes results in the `### Plateau Status` section. If the signal is `PLATEAU_LIKELY`, read `docs/ref-plateau.md` and follow the response protocol. If `NO_PLATEAU_DETECTED`, proceed with standard session.
+
+## Capstone Build Guidance
+
+When the learner is building a capstone project:
+- Write all capstone build artifacts under `capstone/<project-name>/`, a sibling to `learning/`. Only move artifacts to their production location (e.g., `.claude/skills/`) when the learner marks them ready.
+- The capstone spec lives at `capstone/capstone.md` (written by the capstone-architect agent).
+- Proposals live at `capstone/capstone-proposals.md`.
 
 ## Remember
 

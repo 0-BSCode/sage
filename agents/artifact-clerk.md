@@ -48,7 +48,7 @@ The `Project:` field is optional. When provided, use it as the canonical project
    - `metrics/dashboard.md` (coach effectiveness metrics, if present)
    - `docs/references/index.md` (reference document index, if it exists)
    - `docs/demos/index.html` (demo index, if it exists)
-   - `capstone.md` (capstone project spec, if it exists)
+   - `../capstone/capstone.md` (capstone project spec, if it exists — lives in `capstone/` sibling to `learning/`)
    - `cross-refs/INDEX.md` (cross-project topic registry index — look for the `cross-refs/` directory by walking up from the learning path to the repo root. Search up to 4 parent directories from the specified path.)
    - From INDEX.md, find the current project's row and load `cross-refs/<current-project>.md` plus each file listed in the "Overlaps With" column. From overlapping project files, extract only rows where the current project appears in "Also Covered In."
    - **Legacy fallback:** If `cross-refs/` directory does not exist but `cross-references.md` does, read the monolithic file instead.
@@ -91,10 +91,12 @@ The `Project:` field is optional. When provided, use it as the canonical project
 - **Learner state:** [energy/mood from savepoint]
 
 ### Due Reviews
-- **Overdue cards:** [count] (oldest due: [date])
+- **Overdue cards:** [count] ([N]-day gap since last review)
 - **Due today:** [count]
 - **New unreviewed:** [count]
 - [List first 5 overdue card IDs + question previews]
+
+To compute the review gap: identify the most recent session that contained SRS card reviews (look for grading entries in `cards.srs.json` review history, or journal entries mentioning SRS/review). Calculate the number of days from that session's date to today's date. Do NOT use the gap between the two most recent sessions — use the gap from the last review session to today.
 
 ### Knowledge Snapshot
 - **Mastered:** [count] concepts
@@ -644,25 +646,11 @@ Run these checks and collect results:
 - [Any consistency issues found, or "None"]
 ```
 
-### Step 10b: Version-control artifacts
+### Step 10b: Remind learner to commit
 
-Delegate to the learning-git agent to commit all artifact changes:
+Include this line in the confirmation report: "Don't forget to commit your learning artifacts."
 
-```
-Task(subagent_type="learning-git", prompt="Operation: commit\nPath: <path>\nSession: <N>\nDate: <YYYY-MM-DD>\nSummary: <summary from confirmation report>")
-```
-
-Where:
-- `<path>` is the learning directory from the `Path:` field
-- `<N>` is the session number determined in Step 2
-- `<YYYY-MM-DD>` is the session date from the coach's notes
-- `<summary>` is a one-line summary from the confirmation report (e.g., "SRS review (28 cards), hreflang introduction, 7 new cards")
-
-Also pass any files modified outside the learning path that should be staged:
-- If any `cross-refs/*.md` files were modified in Step 8b, append to the prompt:
-  `\nAlso stage: <path-to-cross-refs/file1.md> <path-to-cross-refs/file2.md> ...`
-
-**Non-blocking:** If the agent fails or is unavailable, WARN in the confirmation report but do not block the checkpoint. Artifacts are the primary record; version control is supplementary.
+The learner manages their own git repo. This ensures all artifacts (including metrics patched after checkpoint) are captured in a single commit.
 
 ### Step 10c: Compute coach metrics
 
@@ -718,7 +706,7 @@ Path: <topic-slug>/learning/
      ```
    - Create `coach-insights.md` with header `# Coach Insights\n\n## Teaching Behavior Rules` if it doesn't exist
 5. For rejected candidates, no action needed
-6. Commit via learning-git
+6. Remind learner to commit
 
 **Rules:**
 - Never create CI-# entries without coach approval
