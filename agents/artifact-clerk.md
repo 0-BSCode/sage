@@ -17,7 +17,7 @@ Then use `$SAGE_ROOT/tools/...` in all subsequent commands within the same bash 
 
 ## Operations
 
-You support exactly three operations, determined by the `Operation:` field in your prompt.
+You support exactly four operations, determined by the `Operation:` field in your prompt.
 
 ---
 
@@ -728,6 +728,28 @@ Path: <topic-slug>/learning/
 
 ---
 
+## Operation: `patch-metrics`
+
+**Purpose:** Append session token metrics to the latest journal entry after all post-checkpoint work is complete.
+
+**Input format:**
+```
+Operation: patch-metrics
+Path: <topic-slug>/learning/
+Metrics file: /tmp/session-metrics-<topic-slug>.txt
+```
+
+**Steps:**
+
+1. Read the metrics file at the path provided.
+2. Find the latest `journal/session-NN.md` file (highest NN).
+3. Append a `### Token Metrics` section to the end of that file with the metrics file contents verbatim. Do NOT reformat, summarize, or edit the metrics — the file is the source of truth.
+4. If the metrics file doesn't exist or is empty, report "No metrics file found" and skip.
+
+**Output:** Confirmation of what was appended and to which journal entry.
+
+---
+
 ## Migration: Legacy `journal.md` to `journal/` Directory
 
 When you detect a legacy `journal.md` file (no `journal/` directory exists), migrate it automatically before proceeding with the current operation.
@@ -772,5 +794,6 @@ All artifact formats are defined in the Sage skill. You must match them exactly:
 - Journal entry format: One file per session in `journal/session-NN.md`, starting with `## Session N — YYYY-MM-DD` with subsections
 - Journal index: NEVER write to `journal/index.md` directly. Use `journal_writer.py append <path> --stdin`. Canonical 8-column format: `| # | Date | Type | Focus | Reviews | Avg Grade | Summary | File |`.
 - Knowledge map: markdown table with columns `| Concept | Status | Introduced | Last Tested | Notes |`. The `Introduced` column is set once when a concept is first added (`S<N>` or `prior`) and never modified. Concepts table rows are managed by `kmap_writer.py` — use `add-concept` to add new rows and `update-status` to change status/last-tested/notes (preserves Introduced automatically). Status legend and Status Changelog use `fix-legend`, `ensure-sections`, `changelog-append` subcommands. Weak spot tracking has moved to `weak-spots.md` via `weak_spot_writer.py`.
+- Cross-refs: table columns are exactly `| Concept | Also Covered In | Status | Notes |`. Do not rename or reorder columns.
 - Cards: NEVER write to `cards.md` directly. Use `card_writer.py append <path> --stdin`. Canonical format: `**Q:**`, `**A:**`, `**Tags:**`.
 - Weak spots and coach errors: NEVER write entries directly to `weak-spots.md` or `coach-errors.md`. Use `weak_spot_writer.py append --kind <WS|M|CE|CP> <path> --stdin`. Kind routes the entry to the correct file and prefix namespace. The writer refuses to write a coach entry to `weak-spots.md` and vice versa. Canonical formats: learner `## WS-[N] — [description]` (with Category, Correct model, History subsection), coach content `## CE-[N] — [description]`, coach process `## CP-[N] — [description]`. WS field set: Category, Session, Last tested, What happened, Correct model, Why it matters, Cards, Concepts, Status + History subsection. CE/CP field set: Session, What happened, Root cause, Correction, Why it matters, Follow-up, Source, Cards, Status.

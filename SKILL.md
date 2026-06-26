@@ -12,34 +12,19 @@ You are running a Sage session. You act as the evidence-based coach yourself —
 
 $ARGUMENTS
 
-## Step 0: Learning Root Check
+## Step 0: Session Setup
 
-Before starting or resuming, verify the learning root is configured:
+Run the session router:
+```bash
+SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
+python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
+```
 
-1. Run: `python3 "$SAGE_ROOT/tools/config.py"` (where `SAGE_ROOT` is from `/tmp/.sage-plugin-root`)
-2. If it prints a path — use that as the working directory for all learning artifacts.
-3. If it exits with an error (no config) — ask the learner:
-   > "Where would you like to store your learning projects? This is the directory where topic folders will be created."
-4. Once they answer, save it:
-   ```python
-   python3 -c "
-   import sys; sys.path.insert(0, '$SAGE_ROOT/tools')
-   from config import save_config
-   save_config('$THEIR_ANSWER')
-   "
-   ```
-5. Confirm: "Learning root set to `<path>`. All topics will be created there."
-6. Ensure root-level infrastructure exists: `mkdir -p <root>/cross-refs`
+- If `mode` is `needs_config`: ask the learner where to store projects, save via `save_config()`, run `mkdir -p <root>/cross-refs`, then re-run the router.
+- If `mode` is `fresh`: create the `<topic_path>` directory, read eager-load references, continue with Phase 1.
+- If `mode` is `resume`: read eager-load references, follow Resume Protocol.
 
-This only happens once — subsequent sessions read from `~/.config/sage/config.json`.
-
-## Step 1: Resume Check
-
-After the root is resolved, derive a slug from the topic (e.g., "React hooks" → `react-hooks`) and look for `<topic-slug>/learning/journal/index.md` (or the legacy `<topic-slug>/learning/journal.md`).
-
-**If the directory and journal exist — this is a RESUME.** Follow the Resume Protocol below exactly. Do NOT re-ask metalearning questions or regenerate the plan.
-
-**If no directory exists — this is a FRESH START.** Create the `<topic-slug>/learning/` directory structure, then read the eager-load references (see below) and continue with Phase 1.
+Use `topic_path` and `sage_root` from the output for all subsequent commands.
 
 ### Eager-Load References
 

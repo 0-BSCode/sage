@@ -66,9 +66,3 @@ When a coach error occurs, three things are mandatory:
 | `type:reverse` | Effect to cause | "Given this symptom/output, identify the concept or cause" |
 | `type:error` | Debugging / flaw detection | "Here's a broken instance — what's wrong and why?" |
 
-## General Rules
-
-- Create `plan.md` before starting execution — it grounds the journey
-- Never end a session without a journal entry (clerk writes `journal/session-NN.md`)
-- Only promote a concept's status in the knowledge map based on demonstrated retrieval, not mere exposure
-- Tell the learner what was recorded and where after each artifact update
