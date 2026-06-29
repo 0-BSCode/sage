@@ -1,8 +1,9 @@
 # Sage
 
-Turn Claude Code into a personal tutor that tracks what you've mastered, catches what's slipping, and circles back until it sticks.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
 
-<!-- TODO: Add a gif/screenshot showing a session in action — ideally capturing a retrieval question, the learner answering, and a knowledge map or SRS update in one flow -->
+Turn Claude Code into a personal tutor that tracks what you've mastered, catches what's slipping, and circles back until it sticks.
 
 ## Features
 
@@ -12,6 +13,38 @@ Turn Claude Code into a personal tutor that tracks what you've mastered, catches
 - **Fact-checked teaching** — a verification gate checks claims, code examples, and flashcard answers against current sources before they reach you
 - **Capstone projects** — once you've built enough mastery, the coach designs portfolio-worthy projects tailored to what you've learned
 
+## See it in action
+
+```
+You:  /sage async programming
+Sage: Before I design your plan, I need to understand your learning
+      landscape. What's your current experience with async? What does
+      success look like? What do you expect to be hardest?
+You:  I've used async/await in JS and Python but never understood how
+      it works underneath. I want to deeply understand the mental model.
+
+      ● Verifying 12 claims against current documentation...
+      ✓ All verified (1 correction applied: "resolved" → "fulfilled")
+
+Sage: Here's your plan — 6 milestones, ~16 sessions.
+      [plan with milestones, techniques, and session structure]
+
+      Let's start. Before I explain anything — when you write
+      await fetch(url), what do you think is actually happening
+      with your code's execution?
+You:  The await line gets offloaded from the call stack so it
+      doesn't block...
+Sage: Good instinct. But you said it's offloaded to "another stack."
+      JS is single-threaded — it can't run code somewhere else.
+      So if JS isn't doing the waiting... what is?
+```
+
+## Requirements
+
+- Python 3.8+
+- Claude Code
+- No pip packages required (stdlib only)
+
 ## Install
 
 ```bash
@@ -19,15 +52,15 @@ Turn Claude Code into a personal tutor that tracks what you've mastered, catches
 /plugin install sage@sage
 ```
 
-## Getting started
+## Usage
+
+### First session
 
 ```
 /sage <topic>
 ```
 
 The coach starts by asking about your goals, prior knowledge, and how much time you have. It builds a structured learning plan from your answers, then jumps straight into teaching. Each session ends with a checkpoint, so you can close the terminal and come back anytime.
-
-## Usage
 
 Examples:
 - `/sage React hooks`
@@ -38,9 +71,17 @@ Examples:
 
 Run `/sage <same topic>` again. The coach detects your existing artifacts, loads your last savepoint, handles any overdue reviews, then continues from where you stopped.
 
+If you hard-close the terminal mid-session, your previous sessions are safe (already checkpointed), but the current session's final state may be partially lost. Run `/resume` from the same directory to reopen the conversation where you left off, or run `/sage <topic>` to start a fresh session from the last completed checkpoint.
+
+## Configuration
+
+On first run, Sage asks you to pick a directory (your "learning root") where all topic directories are created. That choice is saved to `~/.config/sage/config.json`.
+
+You can also set it via the `SAGE_LEARNING_ROOT` environment variable, which takes precedence over the config file.
+
 ## What a session produces
 
-Your learning progress lives in human-readable files you own — not in a chat history. Everything is structured markdown and JSON, created in your working directory:
+Your learning progress lives in human-readable files you own — not in a chat history. Everything is structured markdown and JSON, created in your learning root:
 
 ```
 <topic-slug>/
@@ -56,26 +97,26 @@ Your learning progress lives in human-readable files you own — not in a chat h
     ├── coach-errors.md
     ├── coach-insights.md
     ├── questions.json
-    ├── metrics/
-    │   ├── dashboard.md
-    │   └── history.json
-    └── docs/
-        ├── references/
-        └── demos/
+    └── metrics/
+        ├── dashboard.md
+        └── history.json
+└── docs/
+    ├── references/
+    └── demos/
 ```
 
-Artifacts are automatically git-committed so you never lose progress.
+All artifacts are saved at the end of each session via a checkpoint, so you never lose progress.
 
 For cross-topic consolidation, start all your learning topics from the same parent directory. A shared `cross-refs/` directory at the parent level tracks concept overlaps across topics.
 
 <details>
 <summary><h2>How it works</h2></summary>
 
-The plugin has three layers:
+The plugin has two layers:
 
 **Skill** (`/sage`) — the coach. Runs the session, makes pedagogical decisions, and interacts with you directly. Uses Socratic questioning, retrieval practice, and deliberate difficulty.
 
-**Agents** (7 subagents) — delegated specialists:
+**Agents** (6 subagents) — delegated specialists:
 | Agent | Role |
 |-------|------|
 | artifact-clerk | File I/O, format compliance, cross-artifact validation |
@@ -84,22 +125,8 @@ The plugin has three layers:
 | reference-clerk | Standalone reference document generation |
 | demo-generator | Interactive HTML demos for persistent misconceptions |
 | capstone-architect | Portfolio-worthy capstone project design |
-| learning-git | Artifact version control |
 
-**MCP Tools** (38 tools) — deterministic operations the agents call:
-| Category | Tools |
-|----------|-------|
-| SRS Engine | `srs_init`, `srs_sync`, `srs_due`, `srs_grade`, `srs_stats`, `srs_forecast` |
-| Cards | `card_append`, `card_validate`, `card_fix` |
-| Journal | `journal_append`, `journal_validate`, `journal_fix` |
-| Knowledge Map | `kmap_add_concept`, `kmap_update_status`, `kmap_changelog_append`, `kmap_fix_legend`, `kmap_ensure_sections`, `kmap_validate` |
-| Weak Spots | `weak_spot_append`, `weak_spot_validate`, `weak_spot_fix` |
-| Assessment | `assessment_init`, `assessment_add`, `assessment_add_batch`, `assessment_select`, `assessment_record`, `assessment_coverage`, `assessment_stats`, `assessment_calibrate` |
-| Plateau Detection | `plateau_detect` |
-| Coach Metrics | `coach_snapshot`, `coach_trends`, `coach_compare` |
-| Coach Reflection | `coach_reflect`, `coach_evaluate` |
-| Demos | `demo_append`, `demo_validate` |
-| Session Metrics | `session_metrics` |
+These agents are backed by ~30 Python CLI tools handling SRS scheduling, card management, knowledge map updates, assessment, plateau detection, and coach metrics.
 
 </details>
 
@@ -120,7 +147,7 @@ As long as you want. The coach adapts to quick sessions (30–45 min), deep dive
 <details>
 <summary><strong>Where does my learning data go?</strong></summary>
 
-Everything stays on your machine — nothing is sent to a remote server. All learning data is plain markdown and JSON files you own. On first run, Sage asks you to pick a directory (your "learning root"). That choice is saved to `~/.config/sage/config.json`. You can also set it via the `SAGE_LEARNING_ROOT` environment variable. Each topic gets its own subdirectory under the learning root.
+Everything stays on your machine — nothing is sent to a remote server. All learning data is plain markdown and JSON files you own. Each topic gets its own subdirectory under your configured learning root.
 </details>
 
 <details>
@@ -133,14 +160,6 @@ Yes — the learning techniques work for any topic. The core loop (Socratic ques
 <summary><strong>Can I learn multiple topics at once?</strong></summary>
 
 Yes. Each topic gets its own isolated directory (e.g., `react-hooks/learning/`, `distributed-systems/learning/`). If you start all your topics from the same learning root, Sage maintains a shared `cross-refs/` directory that tracks concept overlaps across topics — so if "closures" comes up in both your JavaScript and your Python journey, the coach knows and can reference your existing understanding.
-</details>
-
-<details>
-<summary><strong>I closed my terminal mid-session. Did I lose progress?</strong></summary>
-
-If you end a session normally, everything is checkpointed and git-committed — your exact position, pending reviews, open questions, and energy level are all saved. Run `/sage <same topic>` to resume and the coach picks up from your last savepoint.
-
-If you hard-close the terminal mid-session, your previous sessions are safe (already committed), but the current session's final state may be partially lost. Run `/resume` from the same directory to reopen the conversation where you left off, or run `/sage <topic>` to start a fresh session from the last completed checkpoint.
 </details>
 
 <details>
@@ -189,12 +208,6 @@ Ask the coach during a session — something like "can we create a reference doc
 
 Open an issue for bugs or feature ideas. PRs welcome too.
 
-## Requirements
-
-- Python 3.8+
-- Claude Code
-- No pip packages required (stdlib only)
-
 ## License
 
-MIT
+[MIT](./LICENSE)
