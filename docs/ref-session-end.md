@@ -68,6 +68,8 @@ The clerk reads the metrics file and appends it to the latest journal entry.
 
 Tell them what was saved and when their next spaced review is due.
 
+**Do NOT commit to git automatically.** Suggest the commit message, but let the learner decide when to commit.
+
 ## 9. Spaced Review Reminder
 
 "Your next review is due [date]"
