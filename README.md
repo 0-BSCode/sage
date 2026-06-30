@@ -77,7 +77,18 @@ If you hard-close the terminal mid-session, your previous sessions are safe (alr
 
 On first run, Sage asks you to pick a directory (your "learning root") where all topic directories are created. That choice is saved to `~/.config/sage/config.json`.
 
-You can also set it via the `SAGE_LEARNING_ROOT` environment variable, which takes precedence over the config file.
+### Changing the learning root
+
+To point Sage at a different directory later, use any of these (highest precedence first):
+
+1. **Environment variable** — set `SAGE_LEARNING_ROOT=/new/path`. Overrides the config file for that session.
+2. **Edit the config file** — open `~/.config/sage/config.json` and change `learning_root`:
+   ```json
+   { "learning_root": "/new/path", "version": 1 }
+   ```
+3. **Re-trigger the first-run prompt** — delete `~/.config/sage/config.json`. The next `/sage <topic>` run will ask you to pick a directory again.
+
+Existing topic folders aren't moved automatically — if you want to keep past progress, move them into the new learning root yourself.
 
 ## What a session produces
 

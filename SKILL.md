@@ -20,7 +20,19 @@ SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
 python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
 ```
 
-- If `mode` is `needs_config`: ask the learner where to store projects, save via `save_config()`, run `mkdir -p <root>/cross-refs`, then re-run the router.
+- If `mode` is `needs_config`: ask the learner where to store projects, then:
+  1. **Preview** the resolved path so typos and `~` expansion are visible before anything is written:
+     ```bash
+     python3 "$SAGE_ROOT/tools/config.py" --normalize "<learner-input>"
+     ```
+     Show the resolved absolute path and ask the learner to confirm it's correct (this catches typos like `lerning`).
+  2. On confirmation, **save** it. `save_config()` expands `~`, makes the path absolute, and creates `<root>/cross-refs/` *before* writing the config — no separate `mkdir` is needed:
+     ```bash
+     python3 -c "import sys; sys.path.insert(0, '$SAGE_ROOT/tools'); from config import save_config; print(save_config('<learner-input>'))"
+     ```
+  3. If `save_config` raises (e.g. permission denied, or the path sits under an existing file), report the error and ask for a different location — nothing is persisted on failure, so the learner can safely retry.
+
+  Then re-run the router.
 - If `mode` is `pick`: the learner used a resume keyword (e.g., "continue", "resume"). Present the `projects` list from the router output (sorted by most recent session). Ask the learner to pick one. Then re-run the router with the selected slug — it will return `mode: "resume"`.
 - If `mode` is `fresh`: create the `<topic_path>` directory, read eager-load references, continue with Phase 1.
 - If `mode` is `resume`: read eager-load references, follow Resume Protocol.
