@@ -1,9 +1,15 @@
 # Sage
 
+<p align="center">
+  <img src="docs/banner.png" alt="Sage — an AI tutor for serious self-learners" width="100%">
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
 
-Turn Claude Code into a personal tutor that tracks what you've mastered, catches what's slipping, and circles back until it sticks.
+**An AI tutor for serious self-learners.**
+
+Sage runs inside Claude Code and turns study into active recall, Socratic coaching, verified explanations, spaced review, and durable local learning records.
 
 ## Features
 
