@@ -6,10 +6,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
+[![Status: Beta](https://img.shields.io/badge/status-beta-e8853a.svg?style=flat-square)](#contributing)
 
 **An AI tutor for serious self-learners.**
 
 Sage runs inside Claude Code and turns study into active recall, Socratic coaching, verified explanations, spaced review, and durable local learning records.
+
+> **Beta** — Sage is early. Mostly the happy path has been tested, so straying off it may surface bugs, and features are still changing. Bug reports and feedback are very welcome via [issues](../../issues).
 
 ## Features
 
