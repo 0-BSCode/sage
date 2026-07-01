@@ -51,9 +51,6 @@ The `Project:` field is optional. When provided, use it as the canonical project
    - `../capstone/capstone.md` (capstone project spec, if it exists — lives in `capstone/` sibling to `learning/`)
    - `cross-refs/INDEX.md` (cross-project topic registry index — look for the `cross-refs/` directory by walking up from the learning path to the repo root. Search up to 4 parent directories from the specified path.)
    - From INDEX.md, find the current project's row and load `cross-refs/<current-project>.md` plus each file listed in the "Overlaps With" column. From overlapping project files, extract only rows where the current project appears in "Also Covered In."
-   - **Legacy fallback:** If `cross-refs/` directory does not exist but `cross-references.md` does, read the monolithic file instead.
-
-   **Legacy fallback:** If `journal/index.md` does not exist but `journal.md` does, this is a legacy layout. Read `journal.md` instead and note that migration is needed.
 
 2. Run SRS engine commands (if `cards.srs.json` exists):
    ```bash
@@ -238,8 +235,6 @@ Plan Updates:
 ### Step 1: Read current state
 Read artifact files to understand current state (card numbering, weak spot numbering, knowledge-map rows, etc.). Read `journal/index.md` to determine the current session count and the next session number.
 
-**Legacy check:** If `journal/index.md` does not exist but `journal.md` does, run the migration procedure (see **Migration** section below) before proceeding.
-
 **First session:** If neither `journal/index.md` nor `journal.md` exists, create the `journal/` directory and a new `journal/index.md` with this header:
 
 ```markdown
@@ -326,7 +321,7 @@ Metadata block rules:
 - `cards_reviewed` and `avg_grade` come from the coach's "Review Stats" in session notes. If not provided, use `0` and `null`.
 
 ### Step 2b: Update `journal/index.md`
-- Do NOT write to `journal/index.md` directly. Use the `journal_writer.py` script which guarantees canonical 8-column format and handles legacy migration automatically.
+- Do NOT write to `journal/index.md` directly. Use the `journal_writer.py` script which guarantees canonical 8-column format.
 - Build a JSON object from the session data and pipe it to the script:
   ```bash
   SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
@@ -387,13 +382,11 @@ Where `<json>` is:
 }
 ```
 - Only updates `Status`, `Last Tested`, and `Notes` — the tool preserves `Introduced` automatically
-- The tool handles both legacy 4-column tables and the current 5-column format
 - **Status validation:** Every status value written to the knowledge map MUST be one of the canonical values: `not started`, `introduced`, `developing`, `solid`, `mastered`, or `prior (from [project])`. If the coach sends a non-canonical status (e.g., "familiar", "shaky", "recalled", "practicing", "exposed"), map it to the closest canonical equivalent and WARN. Mapping guide:
   - `new`, `exposed` → `introduced`
   - `familiar`, `shaky`, `practicing`, `in-progress`, `developing` → `developing`
   - `understood`, `recalled`, `demonstrated`, `acquired`, `reinforced`, `developed` → `solid`
   - No aliases for `mastered` — only use when the coach explicitly says `mastered`
-- **Legacy status migration:** When reading `knowledge-map.md`, scan all existing rows for non-canonical statuses. If any are found, normalize them using the mapping guide above and WARN with a summary (e.g., "Migrated 8 statuses: familiar→developing (3), recalled→solid (2), shaky→developing (2), exposed→introduced (1)"). Also replace the status legend section with the canonical one. This runs on every checkpoint but only produces changes once per project — subsequent checkpoints will find only canonical statuses.
 - **First session (knowledge-map is being created):** Check `plan.md` for concepts marked "Prior Knowledge (from [project])" in the skill tree. Only use `prior (from [project])` for concepts that are `solid` or `mastered` in the sibling project — this status means "no need to teach this." For concepts that are `developing` or lower in the sibling project, use `developing` with a note like "Also covered in [project]" — the learner still needs work on these.
 - **Status Changelog:** Do NOT write changelog rows directly. Use the `kmap_writer.py` script:
   ```bash
@@ -593,8 +586,7 @@ If no new entries of a given kind, skip that write.
   - If the concept already exists in this project's file: update its status and notes.
   - If the concept already exists in another project's file (because that project owns it as primary): update that file's row — add the current project to "Also Covered In" if not already listed, and update notes.
   - If a new overlap is created (current project appears in another project's file for the first time): update `cross-refs/INDEX.md` — add the current project to the other project's "Overlaps With" column, and add the other project to the current project's row (create the row if needed).
-- **Legacy fallback:** If `cross-refs/` does not exist but `cross-references.md` does, update the monolithic file instead.
-- If neither `cross-refs/` nor `cross-references.md` was found, skip this step and WARN.
+- If `cross-refs/` was not found, skip this step and WARN.
 
 ### Step 9: Validate cross-artifact consistency
 Run these checks and collect results:
@@ -735,35 +727,6 @@ Metrics file: /tmp/session-metrics-<topic-slug>.txt
 4. If the metrics file doesn't exist or is empty, report "No metrics file found" and skip.
 
 **Output:** Confirmation of what was appended and to which journal entry.
-
----
-
-## Migration: Legacy `journal.md` to `journal/` Directory
-
-When you detect a legacy `journal.md` file (no `journal/` directory exists), migrate it automatically before proceeding with the current operation.
-
-**Migration steps:**
-
-1. Read `journal.md` and parse it into individual session entries. Each session starts with a `## Session` heading.
-2. Create the `journal/` directory.
-3. Write each session entry to its own file: `journal/session-NN.md` (zero-padded two digits based on session number).
-4. Build `journal/index.md` from the parsed sessions:
-   ```markdown
-   # Session Index
-
-   | # | Date | Focus | File |
-   |---|------|-------|------|
-   | 1 | YYYY-MM-DD | [focus from entry] | session-01.md |
-   | 2 | YYYY-MM-DD | [focus from entry] | session-02.md |
-   ```
-5. After confirming all session files were written successfully, delete the legacy `journal.md` file.
-6. Report the migration in your output: "Migrated journal.md → journal/ directory ([N] sessions)".
-
-**Ordering:** Write session files in the order they appear in the original file. The index table rows should be sorted by session number, regardless of the order they appeared in `journal.md`.
-
-**Edge cases:**
-- If a legacy session has a non-numeric identifier (e.g., "3b"), preserve it as-is during migration: `session-03b.md`. New sessions always use integer-only IDs.
-- If the file has no parseable session entries, create an empty index and WARN.
 
 ---
 
