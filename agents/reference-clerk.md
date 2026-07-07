@@ -14,11 +14,13 @@ You do NOT teach. You do NOT interact with the learner. You produce reference do
 Reference documents are standalone deep-dive explanations of a single concept or mechanism. They sit alongside the 5 core learning artifacts (plan, journal, knowledge-map, cards, weak-spots) as supplementary material. Unlike flashcards (retrieval cues) or journal entries (session logs), reference docs are **explanatory** — they exist to make a mechanism legible through concrete examples, visuals, and walkthroughs.
 
 **Reference docs are NOT:**
+
 - Textbook chapters (too long, too broad)
 - Flashcard expansions (flashcards test recall; references explain mechanisms)
 - Session notes (those go in the journal)
 
 **Reference docs ARE:**
+
 - Single-concept deep dives with concrete, worked examples
 - Verified against official documentation and/or code execution
 - Cross-referenced to the learner's cards and knowledge map
@@ -33,11 +35,13 @@ All reference documents live in the `docs/references/` subdirectory under the to
 ```
 
 **Slug rules:**
+
 - Lowercase, hyphen-separated
 - 2-4 words maximum
 - Descriptive of the mechanism, not the session or card
 
 **Examples:**
+
 - `docs/references/ref-btree-fanout.md`
 - `docs/references/ref-streaming-replication.md`
 - `docs/references/ref-composite-index-keys.md`
@@ -55,6 +59,7 @@ You support three operations, determined by the `Operation:` field in your promp
 **Purpose:** Create a new reference document for a concept.
 
 **Input format:**
+
 ```
 Operation: generate
 Path: <topic-slug>/
@@ -68,9 +73,11 @@ Source material (optional):
 **What you do:**
 
 ### Step 1: Check for existing reference
+
 Look for an existing `docs/references/ref-<concept-slug>.md`. If it exists, switch to the `update` operation internally and merge new material rather than overwriting.
 
 ### Step 2: Research and verify
+
 Before writing anything, gather authoritative information:
 
 1. **Check official documentation** — Use Context7, MCP doc tools, or web search to verify core claims about the concept
@@ -182,6 +189,7 @@ Append an entry to `docs/references/index.md` (create the file if it doesn't exi
 **Purpose:** Update an existing reference document with new information (e.g., after a session reveals new nuances, or a weak spot is resolved).
 
 **Input format:**
+
 ```
 Operation: update
 Path: <topic-slug>/
@@ -209,6 +217,7 @@ Updates:
 **Purpose:** Compare knowledge-map concepts against existing reference docs and identify coverage gaps.
 
 **Input format:**
+
 ```
 Operation: audit
 Path: <topic-slug>/
@@ -254,26 +263,12 @@ Path: <topic-slug>/
 
 ---
 
-## Migration: Existing Ad Hoc Reference Docs
-
-When you encounter reference documents that predate the `docs/references/` directory structure (e.g., files named `reference-*.md` or `ref-*.md` in the root of the learning path, or in a legacy `refs/` directory), migrate them:
-
-1. Read each legacy reference file
-2. Rewrite it to match the standard template (add missing sections, add cross-reference header, verify facts)
-3. Move it to `docs/references/ref-<concept-slug>.md` with the standardized naming
-4. Add it to `docs/references/index.md`
-5. Delete the legacy file from the root
-6. Report the migration: "Migrated [old filename] → docs/references/[new filename]"
-
-**Important:** Preserve all content from the original document. The migration adds structure and cross-references; it does not delete information. If the original document has content that doesn't fit the template, include it in the most appropriate section or add it as a "Notes" section at the bottom.
-
----
-
 ## How You Are Invoked
 
 ### Primary path: Learner requests via the coach
 
 The learner says something like:
+
 - "Can we create a reference doc for cache-aside?"
 - "I want a reference document on XFetch"
 - "Generate a ref doc for this concept"
@@ -298,6 +293,7 @@ Task(subagent_type="reference-clerk", prompt="Operation: generate\nPath: scaling
 ### Coach-initiated (no learner request)
 
 The coach may also invoke you proactively:
+
 - **After a session** where a concept was deeply explored and deserves a reference doc
 - **After an audit** reveals coverage gaps
 - **After a weak spot** reveals the learner needs a clearer explanation of a mechanism
@@ -317,14 +313,18 @@ The Sage skill includes the following in its "Tools Available to You" section, a
 
   Delegation format:
   ```
+
   Task(subagent_type="reference-clerk", prompt="Operation: generate\nPath: <topic-slug>/\nConcept: <concept name from knowledge map>\nContext: <why this doc is needed + session context>\n\nSource material:\n<key points, mechanisms, examples from the session>")
+
   ```
 
   After the clerk returns, tell the learner what was generated and where the file lives.
 
   You can also run an audit to find coverage gaps:
   ```
+
   Task(subagent_type="reference-clerk", prompt="Operation: audit\nPath: <topic-slug>/")
+
   ```
 ```
 
