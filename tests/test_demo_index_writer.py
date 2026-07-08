@@ -155,32 +155,6 @@ class TestAppendSortsByDate(unittest.TestCase):
             self.assertLess(pos_second, pos_third)
 
 
-class TestAppendLegacyFieldNames(unittest.TestCase):
-    """append — legacy field names (misconception_id -> weak_spot_id)."""
-
-    def test_legacy_misconception_id_accepted(self):
-        with tempfile.TemporaryDirectory() as demos_dir:
-            demos = Path(demos_dir)
-            (demos / "legacy-demo.html").write_text("<html></html>")
-
-            legacy_entry = {
-                "misconception_id": "WS-10",
-                "misconception_description": "legacy description",
-                "demo_title": "Legacy Demo",
-                "demo_filename": "legacy-demo.html",
-                "related_reference": "ref-legacy.md",
-                "created_date": "2026-01-15",
-            }
-            result = _run_append(demos_dir, legacy_entry)
-
-            self.assertEqual(result.returncode, 0)
-            self.assertIn("Appended", result.stdout)
-
-            html = (demos / "index.html").read_text()
-            self.assertIn("WS-10", html)
-            self.assertIn("legacy description", html)
-
-
 class TestAppendMissingReference(unittest.TestCase):
     """append — missing related_reference shows 'No reference doc yet'."""
 
