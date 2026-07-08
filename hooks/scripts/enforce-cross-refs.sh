@@ -2,7 +2,6 @@
 # Stop hook: blocks session end if knowledge maps were modified
 # but cross-reference registry wasn't updated.
 # Only fires when cwd is the sage repo.
-# Supports both sharded cross-refs/ directory and legacy cross-references.md.
 
 set -euo pipefail
 
@@ -32,7 +31,6 @@ if [[ "$CWD" != "$SAGE_DIR"* ]]; then
 fi
 
 CROSS_REFS_DIR="${SAGE_DIR}/cross-refs"
-CR_FILE="${SAGE_DIR}/cross-references.md"
 
 NOW=$(date +%s)
 
@@ -65,7 +63,7 @@ fi
 # Knowledge map modified — check if cross-refs were updated too
 CR_UPDATED=false
 
-# Check sharded cross-refs/ directory (preferred)
+# Check sharded cross-refs/ directory
 if [ -d "$CROSS_REFS_DIR" ]; then
   while IFS= read -r cr; do
     CR_MTIME=$(stat -c %Y "$cr" 2>/dev/null || echo 0)
@@ -75,13 +73,6 @@ if [ -d "$CROSS_REFS_DIR" ]; then
       break
     fi
   done < <(find "$CROSS_REFS_DIR" -name "*.md" 2>/dev/null)
-# Fall back to legacy monolithic file
-elif [ -f "$CR_FILE" ]; then
-  CR_MTIME=$(stat -c %Y "$CR_FILE" 2>/dev/null || echo 0)
-  CR_AGE=$((NOW - CR_MTIME))
-  if [ "$CR_AGE" -lt "$THRESHOLD" ]; then
-    CR_UPDATED=true
-  fi
 fi
 
 # Knowledge map modified but cross-references weren't — block
