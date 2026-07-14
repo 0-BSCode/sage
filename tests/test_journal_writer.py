@@ -31,8 +31,8 @@ WELL_FORMATTED_FILE = """\
 | 2 | 2026-06-02 | review | Closures | 3 | 3.67 | Review session | session-02.md |
 """
 
-# A legacy 5-column file (missing Reviews, Avg Grade, Summary)
-LEGACY_FILE = """\
+# A 5-column file missing Reviews, Avg Grade, Summary — validate must reject it
+FEWER_COLUMNS_FILE = """\
 # Session Index
 
 | # | Date | Type | Focus | File |
@@ -268,8 +268,8 @@ class TestValidateReportsViolations(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("issue", result.stdout.lower())
 
-    def test_reports_missing_columns_in_legacy_format(self):
-        Path(self.index_path).write_text(LEGACY_FILE)
+    def test_reports_missing_columns(self):
+        Path(self.index_path).write_text(FEWER_COLUMNS_FILE)
         result = _run(["validate", self.index_path])
 
         self.assertNotEqual(result.returncode, 0)
@@ -280,78 +280,6 @@ class TestValidateReportsViolations(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not exist", result.stderr)
-
-
-class TestFixNormalizesLegacyFormat(unittest.TestCase):
-    """fix — normalizes legacy format (fewer columns) to 8-column."""
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.index_path = os.path.join(self.tmpdir, "index.md")
-        Path(self.index_path).write_text(LEGACY_FILE)
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
-
-    def test_migrates_to_canonical_format(self):
-        result = _run(["fix", self.index_path])
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Fixed", result.stdout)
-        self.assertIn("2 rows", result.stdout)
-
-        content = Path(self.index_path).read_text()
-        self.assertIn(CANONICAL_HEADER, content)
-
-        # Original data preserved
-        self.assertIn("React Hooks", content)
-        self.assertIn("Closures", content)
-        self.assertIn("session-01.md", content)
-
-    def test_adds_missing_columns_with_dashes(self):
-        _run(["fix", self.index_path])
-
-        content = Path(self.index_path).read_text()
-        # After fix, all rows should have 8 columns
-        data_lines = [
-            l for l in content.split("\n")
-            if l.strip().startswith("|")
-            and not l.strip().startswith("| #")
-            and "---" not in l
-            and l.strip()
-        ]
-        for line in data_lines:
-            cells = [c.strip() for c in line.strip("|").split("|")]
-            self.assertEqual(len(cells), 8, f"Expected 8 columns, got {len(cells)}: {line}")
-
-    def test_validate_passes_after_fix(self):
-        _run(["fix", self.index_path])
-        result = _run(["validate", self.index_path])
-        self.assertEqual(result.returncode, 0, f"Validate failed after fix: {result.stdout}")
-
-
-class TestFixNoOpOnCanonical(unittest.TestCase):
-    """fix — no-op on already-canonical file."""
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.index_path = os.path.join(self.tmpdir, "index.md")
-        Path(self.index_path).write_text(WELL_FORMATTED_FILE)
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
-
-    def test_reports_no_fixes_needed(self):
-        result = _run(["fix", self.index_path])
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Already canonical", result.stdout)
-
-    def test_file_unchanged(self):
-        original = Path(self.index_path).read_text()
-        _run(["fix", self.index_path])
-        after = Path(self.index_path).read_text()
-        self.assertEqual(original, after)
 
 
 class TestErrorCases(unittest.TestCase):
@@ -383,13 +311,6 @@ class TestErrorCases(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--json", result.stderr)
-
-    def test_fix_missing_file_exits_nonzero(self):
-        path = os.path.join(self.tmpdir, "nonexistent.md")
-        result = _run(["fix", path])
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("does not exist", result.stderr)
 
     def test_validate_missing_file_exits_nonzero(self):
         path = os.path.join(self.tmpdir, "nonexistent.md")
