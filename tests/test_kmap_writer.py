@@ -3,13 +3,11 @@
 
 Covers:
 - add-concept appends to last table in 5-col format
-- add-concept appends to last table in 4-col (legacy) format
 - add-concept validates introduced format (S<N> or prior)
 - add-concept rejects duplicate concept names
 - add-concept rejects missing required fields
 - update-status finds concept by name and updates status/last_tested/notes
 - update-status preserves Introduced in 5-col tables
-- update-status works on 4-col (legacy) tables
 - update-status rejects unknown concept names
 - concept search is case-insensitive
 """
@@ -35,15 +33,6 @@ KMAP_5COL = """\
 |---------|--------|------------|-------------|-------|
 | Alpha | Solid | S1 | S5 | Good recall |
 | Beta | Developing | S2 | S4 | Needs work |
-"""
-
-KMAP_4COL = """\
-# Knowledge Map — Legacy
-
-| Concept | Status | Last Tested | Notes |
-|---------|--------|-------------|-------|
-| Gamma | Solid | S3 | Fine |
-| Delta | Introduced | S1 | New |
 """
 
 KMAP_MULTI_TABLE = """\
@@ -113,18 +102,6 @@ class AddConceptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         body = (self.tmp / "knowledge-map.md").read_text()
         self.assertIn("| NewConcept | Introduced | S7 | S7 |", body)
-
-    def test_add_concept_4col_legacy(self) -> None:
-        self._write_kmap(KMAP_4COL)
-        result = run_writer(
-            "add-concept", str(self.tmp), "--stdin",
-            stdin=make_add_entry("Epsilon", introduced="S5", last_tested="S5"),
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        body = (self.tmp / "knowledge-map.md").read_text()
-        # 4-col table: Introduced column not written
-        self.assertIn("| Epsilon | Introduced | S5 |", body)
-        self.assertNotIn("S5 | S5", body)
 
     def test_add_concept_appends_to_last_table(self) -> None:
         self._write_kmap(KMAP_MULTI_TABLE)
@@ -225,16 +202,6 @@ class UpdateStatusTests(unittest.TestCase):
         body = (self.tmp / "knowledge-map.md").read_text()
         # Alpha was introduced at S1 — must still be S1
         self.assertIn("| Alpha | Mastered | S1 | S20 |", body)
-
-    def test_update_status_4col_legacy(self) -> None:
-        self._write_kmap(KMAP_4COL)
-        result = run_writer(
-            "update-status", str(self.tmp), "--stdin",
-            stdin=make_update_entry("Gamma", status="Mastered", last_tested="S10"),
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        body = (self.tmp / "knowledge-map.md").read_text()
-        self.assertIn("| Gamma | Mastered | S10 |", body)
 
     def test_update_status_case_insensitive_lookup(self) -> None:
         self._write_kmap(KMAP_5COL)
