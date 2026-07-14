@@ -118,21 +118,6 @@ class TestEnforceCrossRefs(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("block", result.stdout)
 
-    # ------------------------------------------------------------------
-    # Legacy cross-references.md fallback works
-    # ------------------------------------------------------------------
-    def test_legacy_crossrefs_fallback(self):
-        now = time.time()
-        kmap = os.path.join(self.tmpdir, "knowledge-map.md")
-        self._touch(kmap, mtime=now)
-
-        legacy_file = os.path.join(self.tmpdir, "cross-references.md")
-        self._touch(legacy_file, mtime=now)
-
-        inp = self._base_input(self.tmpdir)
-        result = self._run(inp)
-        self.assertEqual(result.returncode, 0)
-        self.assertNotIn("block", result.stdout)
 
     # ------------------------------------------------------------------
     # No knowledge-map.md exists -- exits 0

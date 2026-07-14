@@ -2,7 +2,7 @@
 """Regression-safety tests for demo_index_writer.py.
 
 Tests the CLI contract via subprocess — no internal imports.
-Verifies append (create, dedup, sort, legacy fields), validate,
+Verifies append (create, dedup, sort), validate,
 and error handling (invalid JSON, missing fields, bad WS format).
 """
 
