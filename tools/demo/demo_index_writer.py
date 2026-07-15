@@ -84,7 +84,7 @@ ROW_TEMPLATE = (
 # Regex to extract existing rows from the tbody
 ROW_RE = re.compile(
     r"<tr>\s*"
-    r"<td>((?:WS-|M)\d+):\s*(.*?)</td>\s*"
+    r"<td>(WS-\d+):\s*(.*?)</td>\s*"
     r"<td><a\s+href=\"(.*?)\">(.*?)</a></td>\s*"
     r"<td>(.*?)</td>\s*"
     r"<td>(\d{4}-\d{2}-\d{2})</td>\s*"
@@ -158,12 +158,6 @@ def build_index(rows: List[Dict[str, str]]) -> str:
 
 def cmd_append(demos_dir: Path, entry: Dict[str, Any]) -> None:
     """Append a new demo entry to the index."""
-    # Accept legacy field names as fallback
-    if "misconception_id" in entry and "weak_spot_id" not in entry:
-        entry["weak_spot_id"] = entry.pop("misconception_id")
-    if "misconception_description" in entry and "weak_spot_description" not in entry:
-        entry["weak_spot_description"] = entry.pop("misconception_description")
-
     # Validate required fields
     required = ["weak_spot_id", "weak_spot_description", "demo_title",
                 "demo_filename", "created_date"]
@@ -172,8 +166,8 @@ def cmd_append(demos_dir: Path, entry: Dict[str, Any]) -> None:
         print(f"Error: missing required fields: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    # Validate weak_spot_id format (WS-N or legacy M-N)
-    if not re.match(r"^(WS-|M)\d+$", entry["weak_spot_id"]):
+    # Validate weak_spot_id format
+    if not re.match(r"^WS-\d+$", entry["weak_spot_id"]):
         print(f"Error: weak_spot_id must match WS-<number>, got: {entry['weak_spot_id']}",
               file=sys.stderr)
         sys.exit(1)

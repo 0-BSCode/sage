@@ -116,13 +116,6 @@ def _is_concept_table_header(line: str) -> bool:
     cells = _parse_table_row(line)
     return len(cells) >= 4 and cells[0].lower() == "concept" and cells[1].lower() == "status"
 
-
-def _table_has_introduced(header_line: str) -> bool:
-    """Check if a concept table header includes the Introduced column."""
-    cells = _parse_table_row(header_line)
-    return len(cells) >= 5 and cells[2].lower() == "introduced"
-
-
 def _find_all_concept_tables(lines: List[str]) -> List[Tuple[int, int, int]]:
     """Find all concept tables. Returns list of (header_idx, sep_idx, last_data_idx)."""
     tables: List[Tuple[int, int, int]] = []
@@ -144,18 +137,17 @@ def _find_all_concept_tables(lines: List[str]) -> List[Tuple[int, int, int]]:
     return tables
 
 
-def _find_concept_row(lines: List[str], concept_name: str) -> Optional[Tuple[int, int, bool]]:
+def _find_concept_row(lines: List[str], concept_name: str) -> Optional[Tuple[int, int]]:
     """Find a concept by name across all tables.
 
-    Returns (row_idx, header_idx, has_introduced) or None.
+    Returns (row_idx, header_idx) or None.
     """
     tables = _find_all_concept_tables(lines)
     for header_idx, sep_idx, last_data in tables:
-        has_intro = _table_has_introduced(lines[header_idx])
         for row_idx in range(sep_idx + 1, last_data + 1):
             cells = _parse_table_row(lines[row_idx])
             if cells and cells[0].lower() == concept_name.lower():
-                return (row_idx, header_idx, has_intro)
+                return (row_idx, header_idx)
     return None
 
 
@@ -347,13 +339,9 @@ def cmd_add_concept(path: Path, entry: Dict[str, Any]) -> None:
         print("Error: no concept table found in knowledge-map", file=sys.stderr)
         sys.exit(1)
 
-    header_idx, sep_idx, last_data = tables[-1]
-    has_intro = _table_has_introduced(lines[header_idx])
+    _header_idx, _sep_idx, last_data = tables[-1]
 
-    if has_intro:
-        row = f"| {concept} | {status} | {introduced} | {last_tested} | {notes} |"
-    else:
-        row = f"| {concept} | {status} | {last_tested} | {notes} |"
+    row = f"| {concept} | {status} | {introduced} | {last_tested} | {notes} |"
 
     lines.insert(last_data + 1, row)
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -379,22 +367,15 @@ def cmd_update_status(path: Path, entry: Dict[str, Any]) -> None:
         print(f"Error: concept '{concept}' not found", file=sys.stderr)
         sys.exit(1)
 
-    row_idx, header_idx, has_intro = result
+    row_idx, _header_idx = result
     cells = _parse_table_row(lines[row_idx])
 
-    if has_intro:
-        # 5-col: Concept | Status | Introduced | Last Tested | Notes
-        current_introduced = cells[2] if len(cells) > 2 else ""
-        new_status = entry.get("status", cells[1] if len(cells) > 1 else "").strip()
-        new_last_tested = entry.get("last_tested", cells[3] if len(cells) > 3 else "").strip()
-        new_notes = entry.get("notes", cells[4] if len(cells) > 4 else "").strip()
-        lines[row_idx] = f"| {cells[0]} | {new_status} | {current_introduced} | {new_last_tested} | {new_notes} |"
-    else:
-        # 4-col: Concept | Status | Last Tested | Notes
-        new_status = entry.get("status", cells[1] if len(cells) > 1 else "").strip()
-        new_last_tested = entry.get("last_tested", cells[2] if len(cells) > 2 else "").strip()
-        new_notes = entry.get("notes", cells[3] if len(cells) > 3 else "").strip()
-        lines[row_idx] = f"| {cells[0]} | {new_status} | {new_last_tested} | {new_notes} |"
+    # 5-col: Concept | Status | Introduced | Last Tested | Notes
+    current_introduced = cells[2] if len(cells) > 2 else ""
+    new_status = entry.get("status", cells[1] if len(cells) > 1 else "").strip()
+    new_last_tested = entry.get("last_tested", cells[3] if len(cells) > 3 else "").strip()
+    new_notes = entry.get("notes", cells[4] if len(cells) > 4 else "").strip()
+    lines[row_idx] = f"| {cells[0]} | {new_status} | {current_introduced} | {new_last_tested} | {new_notes} |"
 
     path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Updated concept '{concept}' in {path}")

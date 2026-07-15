@@ -77,8 +77,6 @@ APPROVED_CARD_TYPES = frozenset({
 Q_BAD_RE = re.compile(r"\*\*Q\*\*:")   # colon outside bold
 A_BAD_RE = re.compile(r"\*\*A\*\*:")
 TAGS_BAD_RE = re.compile(r"\*\*Tags\*\*:")
-ID_LINE_RE = re.compile(r"^\*\*ID\*\*:\s*", re.IGNORECASE)
-
 
 # ---------------------------------------------------------------------------
 # Core functions
@@ -137,7 +135,7 @@ def build_existing_question_index(text: str) -> Dict[str, int]:
             continue
         # First-write wins: if two non-retired cards already share a normalized
         # form, keep the lower-numbered one as the canonical match. This case
-        # shouldn't happen once dedup is in force, but handles legacy decks.
+        # shouldn't happen once dedup is in force.
         index.setdefault(normalized, card["number"])
     return index
 
@@ -207,13 +205,6 @@ def validate_cards_md(text: str) -> List[Dict[str, Any]]:
                 "text": stripped,
                 "fix": stripped.replace("**Tags**:", "**Tags:**", 1),
             })
-        if ID_LINE_RE.match(stripped):
-            issues.append({
-                "line": i,
-                "type": "legacy_id_line",
-                "text": stripped,
-                "fix": "(remove line — IDs are derived from card number)",
-            })
     return issues
 
 
@@ -224,10 +215,6 @@ def fix_cards_md(text: str) -> Tuple[str, int]:
     result = []
     for line in lines:
         stripped = line.strip()
-        # Skip legacy ID lines
-        if ID_LINE_RE.match(stripped):
-            fixes += 1
-            continue
         # Fix colon placement
         if Q_BAD_RE.match(stripped):
             line = line.replace("**Q**:", "**Q:**", 1)

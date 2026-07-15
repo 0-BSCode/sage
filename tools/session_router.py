@@ -73,9 +73,6 @@ def find_journal(topic_path):
     current = os.path.join(topic_path, "journal", "index.md")
     if os.path.isfile(current):
         return current
-    legacy = os.path.join(topic_path, "journal.md")
-    if os.path.isfile(legacy):
-        return legacy
     return None
 
 

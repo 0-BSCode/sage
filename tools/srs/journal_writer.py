@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Deterministic journal index writer for journal/index.md.
 
-Appends rows and normalizes journal index tables to the canonical 8-column
-format. The LLM produces content; this script enforces formatting.
+Appends rows to journal index tables in the canonical 8-column format.
+The LLM produces content; this script enforces formatting.
 
 Commands:
     append <path> --json '<json>'   Append a new row from JSON
     append <path> --stdin           Read row JSON from stdin
     validate <path>                 Check for format violations
-    fix <path>                      Normalize to canonical 8-column format
 
-Canonical format (8-column superset):
+Canonical format (8-column):
     | # | Date | Type | Focus | Reviews | Avg Grade | Summary | File |
 
 All columns except #, Date, Focus are optional (default to —).
@@ -110,45 +109,12 @@ def _map_headers(source_headers: List[str]) -> List[Optional[str]]:
     return result
 
 
-def _remap_row(row: List[str], source_headers: List[str], canonical_map: List[Optional[str]]) -> Dict[str, str]:
-    """Convert a row from source format to a dict keyed by canonical column names.
-
-    Handles short rows (fewer cells than headers) by mapping positionally,
-    then using heuristics to fix misplacements:
-    - If a value looks like a filename (session-*.md) but isn't mapped to "File",
-      move it to "File" and clear the wrong slot.
-    """
-    d: Dict[str, str] = {}
-    for i, cell in enumerate(row):
-        if i < len(canonical_map) and canonical_map[i]:
-            d[canonical_map[i]] = cell.strip()
-
-    # Heuristic: detect filename in wrong column
-    file_re = re.compile(r"^session-\S+\.md$")
-    if "File" not in d or not d.get("File", "").strip() or d.get("File", "—") == "—":
-        for col_name, value in list(d.items()):
-            if col_name != "File" and file_re.match(value.strip()):
-                d["File"] = value.strip()
-                d[col_name] = "—"
-                break
-
-    return d
-
-
 def _format_row(data: Dict[str, str]) -> str:
     """Format a row dict into a canonical table row."""
     cells = []
     for h in CANONICAL_HEADERS:
         cells.append(data.get(h, "—").strip() or "—")
     return "| " + " | ".join(cells) + " |"
-
-
-def _build_table(rows: List[Dict[str, str]]) -> str:
-    """Build a complete canonical table from row dicts."""
-    lines = [HEADER_LINE, SEPARATOR_LINE]
-    for row in rows:
-        lines.append(_format_row(row))
-    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -201,15 +167,16 @@ def cmd_append(path: Path, row_json: Dict[str, Any]) -> None:
             # Already canonical — just append
             content = text.rstrip() + "\n" + _format_row(new_row) + "\n"
         else:
-            # Non-canonical — migrate existing rows + append
-            migrated_rows = []
-            for row in rows:
-                migrated_rows.append(_remap_row(row, headers, canonical_map))
-            migrated_rows.append(new_row)
-            table = _build_table(migrated_rows)
-            content = pre.rstrip() + "\n\n" + table + "\n"
-            if post.strip():
-                content += "\n" + post.lstrip("\n")
+            # Not canonical — refuse rather than silently rewriting the table.
+            mapped = {m for m in canonical_map if m}
+            missing = set(CANONICAL_HEADERS) - mapped
+            print(
+                f"Error: {path} is not in canonical 8-column format "
+                f"(missing columns: {', '.join(sorted(missing))}). "
+                f"Expected: {' | '.join(CANONICAL_HEADERS)}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     path.write_text(content, encoding="utf-8")
     print(f"Appended session {session_num} to {path}")
@@ -265,47 +232,6 @@ def cmd_validate(path: Path) -> None:
     sys.exit(1)
 
 
-def cmd_fix(path: Path) -> None:
-    """Normalize journal/index.md to canonical 8-column format."""
-    if not path.exists():
-        print(f"Error: {path} does not exist", file=sys.stderr)
-        sys.exit(1)
-
-    text = path.read_text(encoding="utf-8")
-    headers, rows, pre, post = _parse_table(text)
-
-    if headers is None:
-        print(f"No table found in {path} — nothing to fix")
-        return
-
-    canonical_map = _map_headers(headers)
-    mapped = {m for m in canonical_map if m}
-
-    if mapped == set(CANONICAL_HEADERS):
-        # Check row widths for mismatches
-        needs_fix = False
-        for row in rows:
-            if len(row) != len(headers):
-                needs_fix = True
-                break
-        if not needs_fix:
-            print(f"Already canonical — no fixes needed in {path}")
-            return
-
-    # Migrate all rows
-    migrated_rows = []
-    for row in rows:
-        migrated_rows.append(_remap_row(row, headers, canonical_map))
-    table = _build_table(migrated_rows)
-
-    content = pre.rstrip() + "\n\n" + table + "\n"
-    if post.strip():
-        content += "\n" + post.lstrip("\n")
-
-    path.write_text(content, encoding="utf-8")
-    print(f"Fixed {path} — migrated {len(migrated_rows)} rows to canonical 8-column format")
-
-
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -333,9 +259,6 @@ def main() -> None:
     p_validate = subparsers.add_parser("validate", help="Check for format violations")
     p_validate.add_argument("path", help="Path to journal/index.md or learning directory")
 
-    p_fix = subparsers.add_parser("fix", help="Normalize to canonical 8-column format")
-    p_fix.add_argument("path", help="Path to journal/index.md or learning directory")
-
     args = parser.parse_args()
     path = _resolve_path(args.path)
 
@@ -362,9 +285,6 @@ def main() -> None:
 
     elif args.command == "validate":
         cmd_validate(path)
-
-    elif args.command == "fix":
-        cmd_fix(path)
 
 
 if __name__ == "__main__":

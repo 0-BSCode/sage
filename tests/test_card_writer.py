@@ -61,7 +61,6 @@ MALFORMED_CARDS_MD = """\
 ### Card 2
 **Q** : Another bad line
 **A**: Answer here
-**ID**: legacy-id-123
 **Tags**: type:fact
 
 ---
@@ -328,18 +327,6 @@ class TestValidateReportsViolations(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("bad_q_format", result.stdout)
 
-    def test_validate_reports_legacy_id_line(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            cards_md = Path(tmpdir) / "cards.md"
-            cards_md.write_text(
-                "### Card 1\n**Q:** Question\n**A:** Answer\n**ID**: legacy-123\n**Tags:** type:fact\n---\n"
-            )
-
-            result = _run(["validate", str(cards_md)])
-
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("legacy_id_line", result.stdout)
-
 
 class TestFixRewritesFormat(unittest.TestCase):
     """fix — rewrites non-canonical format in-place."""
@@ -359,8 +346,6 @@ class TestFixRewritesFormat(unittest.TestCase):
             self.assertNotIn("**Q**:", content)
             self.assertNotIn("**A**:", content)
             self.assertNotIn("**Tags**:", content)
-            # Legacy ID lines should be removed
-            self.assertNotIn("**ID**:", content)
 
     def test_fix_then_validate_passes(self):
         """After fix, validate should pass."""

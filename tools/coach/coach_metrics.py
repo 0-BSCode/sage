@@ -130,24 +130,15 @@ def parse_changelog_solid_sessions(path: Path) -> Dict[str, int]:
             continue
 
         cells = [c.strip() for c in line.strip().split("|")[1:-1]]
-        if len(cells) < 4:
+        if len(cells) < 5:
             continue
         if cells[0].lower() == "date" or "---" in cells[0]:
             continue
 
-        # Handle both formats:
-        #   5-col: Date | Concept | From | To | Session
-        #   4-col: Date | Concept | From → To | Session
+        # 5-col: Date | Concept | From | To | Session
         concept = cells[1].strip().lower()
         session_str = cells[-1].strip()
-
-        if len(cells) >= 5:
-            to_status = cells[3].strip().lower()
-        else:
-            # 4-col: parse "From → To" cell
-            arrow_cell = cells[2]
-            parts = re.split(r"\s*→\s*", arrow_cell)
-            to_status = parts[-1].strip().lower() if parts else ""
+        to_status = cells[3].strip().lower()
 
         if to_status != "solid":
             continue
@@ -188,22 +179,16 @@ def parse_changelog_regressions(path: Path) -> List[Dict[str, Any]]:
             continue
 
         cells = [c.strip() for c in line.strip().split("|")[1:-1]]
-        if len(cells) < 4:
+        if len(cells) < 5:
             continue
         if cells[0].lower() == "date" or "---" in cells[0]:
             continue
 
+        # 5-col: Date | Concept | From | To | Session
         concept = cells[1].strip()
         session_str = cells[-1].strip()
-
-        if len(cells) >= 5:
-            from_status = cells[2].strip().lower()
-            to_status = cells[3].strip().lower()
-        else:
-            arrow_cell = cells[2]
-            parts = re.split(r"\s*→\s*", arrow_cell)
-            from_status = parts[0].strip().lower() if len(parts) >= 2 else ""
-            to_status = parts[-1].strip().lower() if parts else ""
+        from_status = cells[2].strip().lower()
+        to_status = cells[3].strip().lower()
 
         if from_status != "solid":
             continue
