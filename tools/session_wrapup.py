@@ -4,7 +4,7 @@
 Bundles post-checkpoint scripts into a single invocation:
   1. coach_metrics.py snapshot
   2. coach_reflector.py evaluate
-  3. session_metrics.py (runs last to capture full token consumption)
+  3. session_duration.py (current-sitting wall time from the transcript)
 
 Each step catches failures independently — partial results are returned.
 
@@ -39,6 +39,9 @@ def run_script(cmd, label):
 
 
 def run(sage_root, topic_path, topic_slug, session_id=""):
+    # TODO: remove topic_slug — dead since session token metrics were removed (it only
+    # named the /tmp metrics file). Removal is a CLI change: also update argv parsing,
+    # both usage strings, and the caller in docs/ref-session-end.md.
     errors = []
     coach_metrics_flags = []
     insight_updates = []
@@ -73,24 +76,21 @@ def run(sage_root, topic_path, topic_slug, session_id=""):
     else:
         insights_ok = True
 
-    # 3. Session metrics (last — captures full token consumption)
-    metrics_cmd = [
-        "python3", os.path.join(sage_root, "tools", "session_metrics.py"),
+    # 3. Session duration (current-sitting wall time from the transcript)
+    duration_cmd = [
+        "python3", os.path.join(sage_root, "tools", "session_duration.py"),
     ]
     if session_id:
-        metrics_cmd.append(session_id)
-    else:
-        metrics_cmd.append("")
-    metrics_cmd.append(topic_slug)
+        duration_cmd.append(session_id)
 
-    metrics_ok, metrics_out = run_script(metrics_cmd, "session_metrics")
-    metrics_file = f"/tmp/session-metrics-{topic_slug}.txt" if metrics_ok else None
-    if not metrics_ok:
-        errors.append(f"session_metrics: {metrics_out}")
+    duration_ok, duration_out = run_script(duration_cmd, "session_duration")
+    duration = duration_out if duration_ok and duration_out else None
+    if not duration_ok:
+        # Non-blocking: duration is best-effort. The clerk falls back to asking the learner.
+        errors.append(f"session_duration: {duration_out}")
 
     return {
-        "metrics_file": metrics_file,
-        "metrics_ok": metrics_ok,
+        "duration": duration,
         "coach_metrics_ok": coach_metrics_ok,
         "coach_metrics_flags": coach_metrics_flags,
         "insights_ok": insights_ok,

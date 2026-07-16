@@ -155,7 +155,7 @@ These agents are backed by ~30 Python CLI tools handling SRS scheduling, card ma
 <details>
 <summary><strong>What Claude Code plan do I need?</strong></summary>
 
-Sage uses Opus and spawns multiple subagents per session. The **Max plan** is recommended. Pro plan users will likely hit rate limits mid-session, which interrupts the teaching flow. Token consumption is tracked per session in your journal entries.
+Sage uses Opus and spawns multiple subagents per session. The **Max plan** is recommended. Pro plan users will likely hit rate limits mid-session, which interrupts the teaching flow. Session duration is recorded in your journal entries.
 </details>
 
 <details>

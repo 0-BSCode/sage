@@ -18,7 +18,6 @@ Each entry: `HH:MM:SS <hook-name>: <outcome>`.
 | Reset verification | PostToolUse (Agent) | `scripts/reset-verification.sh` | Resets counter when verification-gate agent is called. Creates counter file on first call. |
 | Checkpoint guard | PreToolUse (Agent) | `scripts/checkpoint-guard.sh` | Guards checkpoint calls. |
 | Enforce cross-refs | Stop | `scripts/enforce-cross-refs.sh` | Blocks session end if knowledge maps were modified but cross-refs/ wasn't updated. |
-| Track subagent | SubagentStop | `scripts/track-subagent.sh` | Tracks subagent token consumption. |
 
 ## Known Issues
 

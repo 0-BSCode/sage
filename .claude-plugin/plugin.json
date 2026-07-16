@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "sage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Evidence-based learning coach with spaced repetition, retrieval practice, and mastery tracking",
   "author": {
     "name": "0-BSCode",

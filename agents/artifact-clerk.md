@@ -176,21 +176,10 @@ Session Data:
 - Session number: [N]
 - Date: [YYYY-MM-DD]
 - Session type: [Quick/Deep/Spaced Review]
-- Metrics file: [path, e.g. "/tmp/session-metrics-frontend-maintainability.txt" — if provided]
-- Duration: [pre-formatted by coach, e.g. "42m15s"]
-- Context: [pre-formatted by coach, e.g. "12% of 1M (120000 tokens)"]
-- Conversation: [pre-formatted by coach, e.g. "📥 26000 in / 📤 79700 out"]
-- Subagents: [pre-formatted by coach — full per-invocation breakdown with timestamps, written verbatim]
-- Grand total: [pre-formatted by coach, e.g. "2409835"]
+- Duration: [wall time, e.g. "42m15s" — from session_duration.py via wrapup, if provided]
 - Resumed from: [previous savepoint or "Fresh start"]
 
-**Metrics file passthrough (preferred):** If the coach provides a metrics file path (e.g., `Metrics file: /tmp/session-metrics-<slug>.txt`), read that file with the Read tool and write its contents verbatim into the Session Metrics section of the journal entry. Do NOT reformat, summarize, or drop any fields. The file content replaces Duration/Context/Conversation/Subagents/Grand total fields — do not also write inline metrics if the file is available.
-
-**Metrics validation (fallback):** If metrics are provided inline (no file path), validate before writing:
-1. Every subagent line MUST contain all four fields: `in:`, `out:`, `cache-create:`, `cache-read:`
-2. Every agent group MUST have per-invocation timestamp lines indented below it
-3. The aggregate line MUST include `fresh` keyword and all four fields
-If any field is missing, read `<path>/logs/subagent-tokens.jsonl` directly, filter entries by session date, and reconstruct the correct format. Emit WARN: "Metrics were incomplete — reconstructed from JSONL log."
+**Duration handling:** Write the provided `Duration` value into the journal entry's `**Duration:**` field. If no duration was provided (e.g. wrapup could not resolve the session transcript), ask the learner for the session wall time. Do NOT reconstruct from token logs — session token tracking has been removed.
 
 What Was Covered:
 [bullet list from coach]
@@ -280,11 +269,7 @@ weak_spots:
 
 **Focus:** [topics covered]
 **Session Type:** [Quick / Deep / Spaced Review]
-**Duration:** [wall time]
-**Context:** [from metrics file or coach — e.g. "12% of 1M (120000 tokens)"]
-**Conversation:** [from metrics file or coach — e.g. "📥 26000 in / 📤 79700 out"]
-**Subagents:** [from metrics file or coach — full per-invocation breakdown with all four fields: in, out, cache-create, cache-read]
-**Grand total:** [from metrics file or coach — e.g. "2409835"]
+**Duration:** [wall time — from session_duration.py via wrapup]
 **Resumed from:** [Session N-1 savepoint / Fresh start]
 
 ### What Was Covered
@@ -603,7 +588,7 @@ Run these checks and collect results:
 
 6. **Capstone-to-knowledge-map:** If `capstone.md` exists, check the Technical Requirements table. Verify that every concept listed there still has status >= `solid` in `knowledge-map.md`. If any concept has regressed below `solid`, WARN: "Capstone requirement [concept] has regressed to [status] — consider a review session or running `/capstone` to review the spec."
 
-7. **Session metrics provided:** If `Duration:`, `Context:`, `Conversation:`, or `Grand total:` is missing, empty, or contains the word "approximate", emit a WARN: "Session metrics incomplete — check that session-tokens.sh ran successfully."
+7. **Session duration provided:** If `Duration:` is missing or empty, emit a WARN: "Session duration missing — check that session_duration.py resolved the transcript, or ask the learner for wall time."
 
 8. **Card type coverage:** Parse the tags of each new card and count the distribution by type. Report it in the confirmation report as `Cards by type: <N> fact, <N> why, <N> process, <N> discrimination, <N> transfer, <N> reverse, <N> error`. If more than 70% of new cards in this session share a single type, emit a WARN: "Card type distribution skewed toward <type> (<N>/<total>). Consider whether other cognitive operations on this material are being tested."
 
@@ -710,23 +695,22 @@ Path: <topic-slug>/learning/
 
 ## Operation: `patch-metrics`
 
-**Purpose:** Append session token metrics to the latest journal entry after all post-checkpoint work is complete.
+**Purpose:** Patch the session duration into the latest journal entry after wrapup computes it (wrapup runs after the checkpoint that wrote the entry, so the duration arrives late).
 
 **Input format:**
 ```
 Operation: patch-metrics
 Path: <topic-slug>/learning/
-Metrics file: /tmp/session-metrics-<topic-slug>.txt
+Duration: <wall time, e.g. "42m15s">
 ```
 
 **Steps:**
 
-1. Read the metrics file at the path provided.
-2. Find the latest `journal/session-NN.md` file (highest NN).
-3. Append a `### Token Metrics` section to the end of that file with the metrics file contents verbatim. Do NOT reformat, summarize, or edit the metrics — the file is the source of truth.
-4. If the metrics file doesn't exist or is empty, report "No metrics file found" and skip.
+1. Find the latest `journal/session-NN.md` file (highest NN).
+2. Set that entry's `**Duration:**` field to the provided value (replacing any placeholder or empty value).
+3. If no `Duration` was provided, report "No duration provided" and skip.
 
-**Output:** Confirmation of what was appended and to which journal entry.
+**Output:** Confirmation of the duration patched and to which journal entry.
 
 ---
 

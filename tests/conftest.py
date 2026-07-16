@@ -14,6 +14,6 @@ for subdir in ["srs", "assessment", "coach", "plateau", "demo"]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-# Top-level tools/ for session_metrics, mcp_server
+# Top-level tools/ for session_duration, mcp_server
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
