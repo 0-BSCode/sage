@@ -52,17 +52,18 @@ python3 "$SAGE_ROOT/tools/session_wrapup.py" "$SAGE_ROOT" "<topic_path>" "<topic
 
 If `coach_metrics_flags` is non-empty, mention the flags in your session summary.
 If `insight_updates` is non-empty, update the corresponding CI-# entries in `coach-insights.md`.
+The wrapup returns `duration` (current-sitting wall time from the session transcript, or null) — used in step 7.
 If any `errors`, note them but don't block — these are non-critical.
 
-## 7. Patch Metrics into Journal
+## 7. Patch Duration into Journal
 
 ```
-Task(subagent_type="artifact-clerk", prompt="Operation: patch-metrics\nPath: <topic-slug>/learning/\nMetrics file: /tmp/session-metrics-<topic-slug>.txt")
+Task(subagent_type="artifact-clerk", prompt="Operation: patch-metrics\nPath: <topic-slug>/learning/\nDuration: <duration from step 6>")
 ```
 
-The clerk reads the metrics file and appends it to the latest journal entry.
+The clerk patches the session duration into the latest journal entry.
 
-**Fallback:** If the metrics file wasn't created (check `metrics_ok` from step 6), ask the learner to report from their status line: wall time, context percentage and window size, input tokens, and output tokens. For duration, read `duration_ms` from `/tmp/claude-session-metrics.json` and convert to human-readable (e.g., 2535000 → "42m15s").
+**Fallback:** If `duration` from step 6 is null (wrapup could not resolve the transcript), ask the learner for the session wall time and pass that as the `Duration` value instead.
 
 ## 8. Confirm to Learner
 
