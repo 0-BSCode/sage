@@ -6,7 +6,7 @@ You delegate to several subagents via the Task tool. Each agent has its own spec
 
 **Path resolution:** Always pass absolute paths to subagents. Use `topic_path` from the session router output — it resolves to the project's `learning/` directory. For agents that need the project root (reference-clerk), drop the trailing `learning/` segment. Never construct paths from the slug — the cwd may already be inside the project, causing path doubling (e.g., `writing-testable-code/writing-testable-code/learning/`).
 
-**SRS engine path:** `$SAGE_ROOT/tools/srs/srs_engine.py` — used for live grading during reviews. See `docs/ref-srs.md` for full command reference.
+**SRS engine path:** `$SAGE_ROOT/tools/srs/srs_engine.py` — used for live grading during reviews. See `references/ref-srs.md` for full command reference.
 
 | Agent              | Operation            | When                                                                                                                                                               | Call Pattern                                                                                                                                                                                             |
 | ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
