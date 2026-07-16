@@ -138,6 +138,16 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
     def test_run_missing_transcript_returns_none(self):
         self.assertIsNone(sd.run(session_id="nope", cwd="/no/such/project"))
 
+    def test_end_is_last_timestamp_not_now(self):
+        # A single sitting entirely in the distant past. If the end were derived
+        # from datetime.now() instead of stamps[-1], the duration would be years,
+        # not the 10-minute transcript span. Pins the deliberate stamps[-1] choice.
+        self._write_transcript(
+            "past.jsonl",
+            ["2020-01-01T00:00:00Z", "2020-01-01T00:10:00Z"],
+        )
+        self.assertEqual(sd.run(session_id="past", cwd=self.cwd), "10m00s")
+
 
 class TestCLI(unittest.TestCase):
     def test_missing_transcript_exits_nonzero(self):
