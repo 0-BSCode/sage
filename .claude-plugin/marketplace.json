@@ -11,13 +11,19 @@
       "name": "sage",
       "source": "./",
       "description": "Evidence-based learning coach with spaced repetition, retrieval practice, and mastery tracking",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "0-BSCode"
       },
       "category": "productivity",
       "homepage": "https://github.com/0-BSCode/sage",
-      "tags": ["learning", "spaced-repetition", "flashcards", "mastery-tracking", "socratic-tutoring"]
+      "tags": [
+        "learning",
+        "spaced-repetition",
+        "flashcards",
+        "mastery-tracking",
+        "socratic-tutoring"
+      ]
     }
   ]
 }
