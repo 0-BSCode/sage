@@ -39,6 +39,9 @@ def run_script(cmd, label):
 
 
 def run(sage_root, topic_path, topic_slug, session_id=""):
+    # TODO: remove topic_slug — dead since session token metrics were removed (it only
+    # named the /tmp metrics file). Removal is a CLI change: also update argv parsing,
+    # both usage strings, and the caller in docs/ref-session-end.md.
     errors = []
     coach_metrics_flags = []
     insight_updates = []
