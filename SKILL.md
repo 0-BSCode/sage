@@ -3,7 +3,7 @@ name: sage
 description: |
   Evidence-based learning session with spaced repetition,
   retrieval practice, and mastery tracking.
-argument-hint: "<topic to learn>"
+argument-hint: "learn <topic> | archive <topic>"
 ---
 
 You are running a Sage session. You act as the evidence-based coach yourself — the complete protocol is defined below. You delegate only to the operational subagents listed in `docs/ref-subagents.md` (artifact-clerk, assessment-agent, verification-gate, reference-clerk, demo-generator, capstone-architect). Your goal is to help the user rapidly acquire deep, durable mastery of their chosen topic through scientifically validated learning techniques.
@@ -14,12 +14,18 @@ $ARGUMENTS
 
 ## Step 0: Session Setup
 
-Run the session router:
+The command grammar is `/sage <verb> <topic>` with exactly two verbs — `learn`
+and `archive` (see `adr/0002-mandatory-command-verbs.md`). The router parses the
+leading verb. Run it, passing `$ARGUMENTS` verbatim (it already includes the verb):
 ```bash
 SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
 python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
 ```
 
+- If `mode` is `unknown_verb`: the learner used the old verb-less grammar (e.g.
+  `/sage react hooks`) or a dropped keyword (`continue`). Show the router's
+  `message` field verbatim — it maps the old form to the new one — and stop. Do
+  not guess a topic or start a session.
 - If `mode` is `needs_config`: ask the learner where to store projects, then:
   1. **Preview** the resolved path so typos and `~` expansion are visible before anything is written:
      ```bash
@@ -33,11 +39,49 @@ python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
   3. If `save_config` raises (e.g. permission denied, or the path sits under an existing file), report the error and ask for a different location — nothing is persisted on failure, so the learner can safely retry.
 
   Then re-run the router.
-- If `mode` is `pick`: the learner used a resume keyword (e.g., "continue", "resume"). Present the `projects` list from the router output (sorted by most recent session). Ask the learner to pick one. Then re-run the router with the selected slug — it will return `mode: "resume"`.
+- If `mode` is `pick`: the learner used a bare verb with no topic (`/sage learn` or `/sage archive`). Present the `projects` list from the router output (sorted by most recent session) and ask the learner to pick one. Then re-run the router as `<action> <selected-slug>` using the `action` field from the output — `learn` returns `mode: "resume"`, `archive` returns `mode: "archive"`.
 - If `mode` is `fresh`: create the `<topic_path>` directory, read eager-load references, continue with Phase 1.
 - If `mode` is `resume`: read eager-load references, follow Resume Protocol.
+- If `mode` is `archive_no_match`: no project matched the slug. Tell the learner nothing was archived. If `suggestion` is non-null, offer it ("Did you mean `<suggestion>`?"). Do not create anything. Stop.
+- If `mode` is `archive`: follow the **Archive Flow** below. This is NOT a learning session — do not read eager-load references or enter Phase 1.
 
 Use `topic_path` and `sage_root` from the output for all subsequent commands.
+
+### Archive Flow
+
+Archiving retires a **Project** (its on-disk container) by moving it under
+`<learning_root>/.archive/`. It is one-way-but-recoverable — nothing is deleted,
+but no `unarchive` command exists yet. See `adr/0003-archive-by-move-recoverable.md`.
+
+1. **Quiescent-project invariant.** `archive_project.py` only ever operates on an
+   at-rest project. If the target `slug` is the project you have been teaching in
+   *this* conversation and its state is unsaved, first run the full end-of-session
+   checklist (`docs/ref-session-end.md`) to persist journal, savepoint, and
+   cross-refs. Only then proceed. (Cold targets — any project you are not actively
+   teaching — are already quiescent; skip straight to step 2.)
+
+2. **Confirm before mutating.** Archival moves real files and cannot be undone by a
+   command. Show the learner exactly what will happen and require an explicit yes.
+   Name the inbound-reference count so a heavily-linked hub project gives pause:
+   ```
+   Archive "<slug>"?
+     • moves  <learning_root>/<slug>/  →  <learning_root>/.archive/<slug>/
+     • moves  cross-refs/<slug>.md     →  .archive/<slug>/cross-refs.md
+     • removes <slug> from INDEX.md (its own row + N inbound references)
+     • no unarchive command exists yet — recovery is manual
+   Nothing is deleted. Proceed? (yes/no)
+   ```
+   If the learner declines, stop — change nothing.
+
+3. **Run the tool** with today's date (passed in so the tool stays deterministic):
+   ```bash
+   python3 "$SAGE_ROOT/tools/archive_project.py" "<learning_root>" "<slug>" --date "$(date +%Y-%m-%d)"
+   ```
+
+4. **Report the result** from the tool's JSON summary: the archive directory
+   (`archived_dir`, may carry a numeric suffix on collision), whether the shard
+   moved (`shard_archived`), and which inbound references were scrubbed
+   (`inbound_refs_scrubbed`). Then stop — archival is a complete, standalone action.
 
 ### Eager-Load References
 
