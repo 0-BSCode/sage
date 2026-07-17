@@ -92,7 +92,35 @@ Retire a project you're done with so it stops cluttering your list:
 /sage archive <topic>
 ```
 
-Run `/sage archive` with no topic to pick from a list. The coach shows you exactly what will move and asks for confirmation first. Archiving moves the project's directory to a hidden `.archive/` folder under your learning root and tidies the cross-reference registry — **nothing is deleted**. There's no `unarchive` command yet, so recovery (moving the folder back) is manual.
+Run `/sage archive` with no topic to pick from a list. The coach shows you exactly what will move and asks for confirmation first. Archiving moves the project's directory to a hidden `.archive/` folder under your learning root and tidies the cross-reference registry — **nothing is deleted**.
+
+**Archiving is one-way by design.** There's no `unarchive` command, and none is planned. Your artifacts stay readable under `.archive/<topic>/` for reference, but the tracking state — knowledge map, cards, SRS schedule — stops being used. Coming back to a topic means starting a fresh project with `/sage learn <topic>`. That's what the confirmation prompt is for: archive when you're genuinely done.
+
+<details>
+<summary><strong>Restoring an archived project by hand</strong></summary>
+
+Nothing is deleted, so you can always undo an archive manually. Each archived project keeps an `archive-meta.json` recording what was removed from the cross-reference index.
+
+```bash
+ROOT=<your learning root>
+SLUG=<archived topic>
+
+# 1. shard back to the registry
+mv "$ROOT/.archive/$SLUG/cross-refs.md" "$ROOT/cross-refs/$SLUG.md"
+
+# 2. read the stashed index fragments, then remove the archive artifact
+cat "$ROOT/.archive/$SLUG/archive-meta.json"
+rm "$ROOT/.archive/$SLUG/archive-meta.json"
+
+# 3. project back into place
+mv "$ROOT/.archive/$SLUG" "$ROOT/$SLUG"
+```
+
+Then hand-edit `cross-refs/INDEX.md`: re-add the project's own row from the meta's `index.own_row`, and add `$SLUG` back to the "Overlaps With" cell of each project listed under `index.inbound_rows`.
+
+⚠️ **Don't paste `index.inbound_rows[].row` back verbatim.** Those rows are snapshots from the moment of archival and may be stale — pasting one can resurrect a reference to a *different* project you archived later, which breaks that project's cross-ref loading. Add only `$SLUG` to each inbound project's *current* cell, and skip any `own_overlaps` entry whose project is no longer active.
+
+</details>
 
 ## Configuration
 

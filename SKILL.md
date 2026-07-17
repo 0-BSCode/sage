@@ -50,8 +50,12 @@ Use `topic_path` and `sage_root` from the output for all subsequent commands.
 ### Archive Flow
 
 Archiving retires a **Project** (its on-disk container) by moving it under
-`<learning_root>/.archive/`. It is one-way-but-recoverable — nothing is deleted,
-but no `unarchive` command exists yet. See `adr/0003-archive-by-move-recoverable.md`.
+`<learning_root>/.archive/`. It is **one-way by design** — there is no `unarchive`
+command and none is planned. Nothing is deleted (the artifacts stay readable for
+reference), but the learner is giving up the tracking state: knowledge map, cards,
+and SRS schedule. Coming back to the topic means starting a fresh project. Make sure
+the learner understands that before proceeding — it is the whole point of the
+confirmation. See `adr/0003-archive-by-move-recoverable.md`.
 
 1. **Quiescent-project invariant.** `archive_project.py` only ever operates on an
    at-rest project. If the target `slug` is the project you have been teaching in
@@ -60,28 +64,45 @@ but no `unarchive` command exists yet. See `adr/0003-archive-by-move-recoverable
    cross-refs. Only then proceed. (Cold targets — any project you are not actively
    teaching — are already quiescent; skip straight to step 2.)
 
-2. **Confirm before mutating.** Archival moves real files and cannot be undone by a
-   command. Show the learner exactly what will happen and require an explicit yes.
-   Name the inbound-reference count so a heavily-linked hub project gives pause:
+2. **Get the plan.** Never describe the archive from your own reading of
+   `INDEX.md` — the tool computes every fact. Run it in dry-run mode, which
+   touches nothing (not even `.archive/`):
+   ```bash
+   python3 "$SAGE_ROOT/tools/archive_project.py" "<learning_root>" "<slug>" --dry-run
+   ```
+   It returns `status: "dry_run"` plus `archived_dir` (the real destination,
+   including any numeric suffix), `shard_archived`, `index_own_row_removed`,
+   `inbound_refs_scrubbed`, and `inbound_ref_count`.
+
+3. **Confirm before mutating**, rendering the prompt **from the dry-run JSON** —
+   every path and number below comes from that output, never from your own
+   inspection. Require an explicit yes. The inbound count is what makes a
+   heavily-linked hub project give pause, so state it plainly:
    ```
    Archive "<slug>"?
-     • moves  <learning_root>/<slug>/  →  <learning_root>/.archive/<slug>/
-     • moves  cross-refs/<slug>.md     →  .archive/<slug>/cross-refs.md
-     • removes <slug> from INDEX.md (its own row + N inbound references)
-     • no unarchive command exists yet — recovery is manual
+     • moves  <project_path>  →  <archived_dir>
+     • moves  cross-refs/<slug>.md → <archived_dir>/cross-refs.md   [omit if shard_archived is false]
+     • removes <slug> from INDEX.md: its own row [omit if index_own_row_removed is false]
+       + <inbound_ref_count> inbound references (<inbound_refs_scrubbed>)
+     • ONE-WAY: there is no unarchive command. Your knowledge map, cards, and
+       SRS schedule stop being used — returning to this topic means starting
+       a fresh project. The artifacts stay readable under .archive/.
    Nothing is deleted. Proceed? (yes/no)
    ```
-   If the learner declines, stop — change nothing.
+   If `archived_dir` carries a numeric suffix, say so — it means a previous
+   archive of this slug already exists. If the learner declines, stop — change
+   nothing (the dry-run has already left the filesystem untouched).
 
-3. **Run the tool** with today's date (passed in so the tool stays deterministic):
+4. **Run the tool for real**, with today's date (passed in so the tool stays
+   deterministic):
    ```bash
    python3 "$SAGE_ROOT/tools/archive_project.py" "<learning_root>" "<slug>" --date "$(date +%Y-%m-%d)"
    ```
+   It recomputes the plan from scratch rather than trusting the dry-run, then
+   executes it.
 
-4. **Report the result** from the tool's JSON summary: the archive directory
-   (`archived_dir`, may carry a numeric suffix on collision), whether the shard
-   moved (`shard_archived`), and which inbound references were scrubbed
-   (`inbound_refs_scrubbed`). Then stop — archival is a complete, standalone action.
+5. **Report the result** from the tool's JSON summary (`status: "archived"`) —
+   same fields as the plan. Then stop; archival is a complete, standalone action.
 
 ### Eager-Load References
 

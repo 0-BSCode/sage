@@ -125,11 +125,37 @@ def next_archive_dir(archive_base, slug):
 # Orchestrator (filesystem side effects).
 # ---------------------------------------------------------------------------
 
-def archive_project(learning_root, slug, date=None):
-    """Archive the Project `slug`. Returns a summary dict.
+# Keys of a plan that make up the caller-facing summary. Everything else
+# in a plan is an internal the executor needs (prefixed `_`).
+SUMMARY_KEYS = (
+    "slug",
+    "project_path",
+    "archived_dir",
+    "shard_archived",
+    "index_own_row_removed",
+    "inbound_refs_scrubbed",
+    "inbound_ref_count",
+)
+
+
+def _summary(plan, status):
+    """Strip internals from a plan, stamping it with a status."""
+    out = {"status": status}
+    out.update({k: plan[k] for k in SUMMARY_KEYS})
+    return out
+
+
+def plan_archive(learning_root, slug):
+    """Compute the full archive plan WITHOUT touching disk.
+
+    Every fact the coach shows in its confirmation prompt — the real
+    destination (including any numeric suffix), whether a shard will move,
+    and the exact inbound references that will be scrubbed — is resolved
+    here, so the prompt never depends on the model eyeballing INDEX.md.
 
     Raises ValueError if the project does not resolve to an existing
-    directory (never half-moves)."""
+    directory. Returns a dict: SUMMARY_KEYS plus `_`-prefixed internals.
+    """
     project_path = os.path.join(learning_root, slug)
     if not os.path.isdir(project_path):
         raise ValueError(f"No project directory at {project_path}")
@@ -138,30 +164,56 @@ def archive_project(learning_root, slug, date=None):
     index_path = os.path.join(cross_refs_dir, "INDEX.md")
     shard_path = os.path.join(cross_refs_dir, f"{slug}.md")
 
-    # 1. Compute INDEX edits in memory first — no writes yet, so a later
-    #    filesystem failure can never leave a corrupted INDEX behind.
+    # INDEX edits are computed in memory — no writes here, and none later
+    # until every move has succeeded, so a filesystem failure can never
+    # leave a corrupted INDEX behind.
     new_index = None
     fragments = {"own_row": None, "own_overlaps": [], "inbound": []}
     if os.path.isfile(index_path):
         with open(index_path, "r") as f:
             new_index, fragments = parse_index(f.read(), slug)
 
-    # 2. Resolve a non-colliding archive destination.
+    # Resolve the non-colliding destination. Deliberately no mkdir — a plan
+    # must leave the filesystem untouched, including `.archive/` itself.
     archive_base = os.path.join(learning_root, ".archive")
-    os.makedirs(archive_base, exist_ok=True)
     dest = next_archive_dir(archive_base, slug)
-
-    # 3. Move the project directory (the big irreversible-ish step).
-    shutil.move(project_path, dest)
-
-    # 4. Co-locate the cross-ref shard, if any.
-    shard_moved = False
-    if os.path.isfile(shard_path):
-        shutil.move(shard_path, os.path.join(dest, "cross-refs.md"))
-        shard_moved = True
-
-    # 5. Write the recovery stash + provenance.
     inbound_projects = [item["project"] for item in fragments["inbound"]]
+
+    return {
+        "slug": slug,
+        "project_path": project_path,
+        "archived_dir": dest,
+        "shard_archived": os.path.isfile(shard_path),
+        "index_own_row_removed": fragments["own_row"] is not None,
+        "inbound_refs_scrubbed": inbound_projects,
+        "inbound_ref_count": len(inbound_projects),
+        # internals for the executor
+        "_index_path": index_path,
+        "_shard_path": shard_path,
+        "_archive_base": archive_base,
+        "_new_index": new_index,
+        "_fragments": fragments,
+    }
+
+
+def archive_project(learning_root, slug, date=None):
+    """Archive the Project `slug` by executing a freshly computed plan.
+
+    Returns a summary dict. Raises ValueError if the project does not
+    resolve to an existing directory (never half-moves)."""
+    plan = plan_archive(learning_root, slug)
+    dest = plan["archived_dir"]
+    fragments = plan["_fragments"]
+
+    # 1. Move the project directory (the big irreversible-ish step).
+    os.makedirs(plan["_archive_base"], exist_ok=True)
+    shutil.move(plan["project_path"], dest)
+
+    # 2. Co-locate the cross-ref shard, if any.
+    if plan["shard_archived"]:
+        shutil.move(plan["_shard_path"], os.path.join(dest, "cross-refs.md"))
+
+    # 3. Write the recovery stash + provenance.
     meta = {
         "original_slug": slug,
         "archived_date": date,
@@ -171,26 +223,18 @@ def archive_project(learning_root, slug, date=None):
             "own_overlaps": fragments["own_overlaps"],
             "inbound_rows": fragments["inbound"],
         },
-        "inbound_ref_count": len(inbound_projects),
-        "shard_archived": shard_moved,
+        "inbound_ref_count": plan["inbound_ref_count"],
+        "shard_archived": plan["shard_archived"],
     }
     with open(os.path.join(dest, "archive-meta.json"), "w") as f:
         json.dump(meta, f, indent=2)
 
-    # 6. Write the scrubbed INDEX last.
-    if new_index is not None:
-        with open(index_path, "w") as f:
-            f.write(new_index)
+    # 4. Write the scrubbed INDEX last.
+    if plan["_new_index"] is not None:
+        with open(plan["_index_path"], "w") as f:
+            f.write(plan["_new_index"])
 
-    return {
-        "status": "archived",
-        "slug": slug,
-        "archived_dir": dest,
-        "shard_archived": shard_moved,
-        "index_own_row_removed": fragments["own_row"] is not None,
-        "inbound_refs_scrubbed": inbound_projects,
-        "inbound_ref_count": len(inbound_projects),
-    }
+    return _summary(plan, "archived")
 
 
 def main():
@@ -202,10 +246,19 @@ def main():
         default=None,
         help="Archived date (YYYY-MM-DD), passed in by the coach for determinism",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the archive plan as JSON without touching disk. The coach "
+             "uses this to build its confirmation prompt from computed facts.",
+    )
     args = parser.parse_args()
 
     try:
-        summary = archive_project(args.learning_root, args.slug, date=args.date)
+        if args.dry_run:
+            summary = _summary(plan_archive(args.learning_root, args.slug), "dry_run")
+        else:
+            summary = archive_project(args.learning_root, args.slug, date=args.date)
     except ValueError as exc:
         print(json.dumps({"status": "error", "error": str(exc)}), file=sys.stderr)
         sys.exit(1)

@@ -182,5 +182,86 @@ class TestArchiveProject(unittest.TestCase):
                 ap.archive_project(tmp, "ghost", date="2026-07-17")
 
 
+class TestPlanArchive(unittest.TestCase):
+    """The plan is what the coach's confirmation prompt is built from, so it
+    must be exact and must not touch disk."""
+
+    def _make_root(self, tmp, with_cross_refs=True):
+        root = Path(tmp)
+        jdir = root / "alpha" / "learning" / "journal"
+        jdir.mkdir(parents=True)
+        (jdir / "index.md").write_text("| 1 | 2026-07-10 |\n")
+        if with_cross_refs:
+            cr = root / "cross-refs"
+            cr.mkdir()
+            (cr / "INDEX.md").write_text(SAMPLE_INDEX)
+            (cr / "alpha.md").write_text("# Cross-References: alpha\n")
+        return root
+
+    def test_dry_run_touches_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._make_root(tmp)
+            before = sorted(p.relative_to(root).as_posix()
+                            for p in root.rglob("*"))
+            index_before = (root / "cross-refs" / "INDEX.md").read_text()
+
+            ap.plan_archive(str(root), "alpha")
+
+            after = sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
+            self.assertEqual(before, after)
+            self.assertEqual(index_before,
+                             (root / "cross-refs" / "INDEX.md").read_text())
+            # planning must not even create .archive/
+            self.assertFalse((root / ".archive").exists())
+
+    def test_plan_reports_exact_inbound_refs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._make_root(tmp)
+            plan = ap.plan_archive(str(root), "alpha")
+            self.assertEqual(plan["inbound_ref_count"], 2)
+            self.assertEqual(sorted(plan["inbound_refs_scrubbed"]),
+                             ["beta", "gamma"])
+            self.assertTrue(plan["shard_archived"])
+            self.assertTrue(plan["index_own_row_removed"])
+
+    def test_plan_predicts_suffixed_destination(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._make_root(tmp)
+            (root / ".archive" / "alpha").mkdir(parents=True)
+            plan = ap.plan_archive(str(root), "alpha")
+            self.assertEqual(plan["archived_dir"],
+                             str(root / ".archive" / "alpha-2"))
+
+    def test_plan_matches_execution(self):
+        """A dry-run must predict exactly what archiving then does."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._make_root(tmp)
+            plan = ap._summary(ap.plan_archive(str(root), "alpha"), "dry_run")
+            actual = ap.archive_project(str(root), "alpha", date="2026-07-17")
+            self.assertEqual(plan["status"], "dry_run")
+            self.assertEqual(actual["status"], "archived")
+            for key in ap.SUMMARY_KEYS:
+                self.assertEqual(plan[key], actual[key], f"mismatch on {key}")
+
+    def test_plan_no_cross_refs_reports_no_shard(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._make_root(tmp, with_cross_refs=False)
+            plan = ap.plan_archive(str(root), "alpha")
+            self.assertFalse(plan["shard_archived"])
+            self.assertFalse(plan["index_own_row_removed"])
+            self.assertEqual(plan["inbound_ref_count"], 0)
+
+    def test_plan_missing_project_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                ap.plan_archive(tmp, "ghost")
+
+    def test_summary_strips_internals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._make_root(tmp)
+            summary = ap._summary(ap.plan_archive(str(root), "alpha"), "dry_run")
+            self.assertFalse([k for k in summary if k.startswith("_")])
+
+
 if __name__ == "__main__":
     unittest.main()
