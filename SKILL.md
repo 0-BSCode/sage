@@ -3,7 +3,7 @@ name: sage
 description: |
   Evidence-based learning session with spaced repetition,
   retrieval practice, and mastery tracking.
-argument-hint: "<topic to learn>"
+argument-hint: "learn <topic> | archive <topic>"
 ---
 
 You are running a Sage session. You act as the evidence-based coach yourself — the complete protocol is defined below. You delegate only to the operational subagents listed in `references/ref-subagents.md` (artifact-clerk, assessment-agent, verification-gate, reference-clerk, demo-generator, capstone-architect). Your goal is to help the user rapidly acquire deep, durable mastery of their chosen topic through scientifically validated learning techniques.
@@ -14,12 +14,18 @@ $ARGUMENTS
 
 ## Step 0: Session Setup
 
-Run the session router:
+The command grammar is `/sage <verb> <topic>` with exactly two verbs — `learn`
+and `archive` (see `adr/0002-mandatory-command-verbs.md`). The router parses the
+leading verb. Run it, passing `$ARGUMENTS` verbatim (it already includes the verb):
 ```bash
 SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
 python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
 ```
 
+- If `mode` is `unknown_verb`: the learner used the old verb-less grammar (e.g.
+  `/sage react hooks`) or a dropped keyword (`continue`). Show the router's
+  `message` field verbatim — it maps the old form to the new one — and stop. Do
+  not guess a topic or start a session.
 - If `mode` is `needs_config`: ask the learner where to store projects, then:
   1. **Preview** the resolved path so typos and `~` expansion are visible before anything is written:
      ```bash
@@ -33,11 +39,70 @@ python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
   3. If `save_config` raises (e.g. permission denied, or the path sits under an existing file), report the error and ask for a different location — nothing is persisted on failure, so the learner can safely retry.
 
   Then re-run the router.
-- If `mode` is `pick`: the learner used a resume keyword (e.g., "continue", "resume"). Present the `projects` list from the router output (sorted by most recent session). Ask the learner to pick one. Then re-run the router with the selected slug — it will return `mode: "resume"`.
+- If `mode` is `pick`: the learner used a bare verb with no topic (`/sage learn` or `/sage archive`). Present the `projects` list from the router output (sorted by most recent session) and ask the learner to pick one. Then re-run the router as `<action> <selected-slug>` using the `action` field from the output — `learn` returns `mode: "resume"`, `archive` returns `mode: "archive"`.
 - If `mode` is `fresh`: create the `<topic_path>` directory, read eager-load references, continue with Phase 1.
 - If `mode` is `resume`: read eager-load references, follow Resume Protocol.
+- If `mode` is `archive_no_match`: no project matched the slug. Tell the learner nothing was archived. If `suggestion` is non-null, offer it ("Did you mean `<suggestion>`?"). Do not create anything. Stop.
+- If `mode` is `archive`: follow the **Archive Flow** below. This is NOT a learning session — do not read eager-load references or enter Phase 1.
 
 Use `topic_path` and `sage_root` from the output for all subsequent commands.
+
+### Archive Flow
+
+Archiving retires a **Project** (its on-disk container) by moving it under
+`<learning_root>/.archive/`. It is **one-way by design** — there is no `unarchive`
+command and none is planned. Nothing is deleted (the artifacts stay readable for
+reference), but the learner is giving up the tracking state: knowledge map, cards,
+and SRS schedule. Coming back to the topic means starting a fresh project. Make sure
+the learner understands that before proceeding — it is the whole point of the
+confirmation. See `adr/0003-archive-by-move-recoverable.md`.
+
+1. **Quiescent-project invariant.** `archive_project.py` only ever operates on an
+   at-rest project. If the target `slug` is the project you have been teaching in
+   *this* conversation and its state is unsaved, first run the full end-of-session
+   checklist (`docs/ref-session-end.md`) to persist journal, savepoint, and
+   cross-refs. Only then proceed. (Cold targets — any project you are not actively
+   teaching — are already quiescent; skip straight to step 2.)
+
+2. **Get the plan.** Never describe the archive from your own reading of
+   `INDEX.md` — the tool computes every fact. Run it in dry-run mode, which
+   touches nothing (not even `.archive/`):
+   ```bash
+   python3 "$SAGE_ROOT/tools/archive_project.py" "<learning_root>" "<slug>" --dry-run
+   ```
+   It returns `status: "dry_run"` plus `archived_dir` (the real destination,
+   including any numeric suffix), `shard_archived`, `index_own_row_removed`,
+   `inbound_refs_scrubbed`, and `inbound_ref_count`.
+
+3. **Confirm before mutating**, rendering the prompt **from the dry-run JSON** —
+   every path and number below comes from that output, never from your own
+   inspection. Require an explicit yes. The inbound count is what makes a
+   heavily-linked hub project give pause, so state it plainly:
+   ```
+   Archive "<slug>"?
+     • moves  <project_path>  →  <archived_dir>
+     • moves  cross-refs/<slug>.md → <archived_dir>/cross-refs.md   [omit if shard_archived is false]
+     • removes <slug> from INDEX.md: its own row [omit if index_own_row_removed is false]
+       + <inbound_ref_count> inbound references (<inbound_refs_scrubbed>)
+     • ONE-WAY: there is no unarchive command. Your knowledge map, cards, and
+       SRS schedule stop being used — returning to this topic means starting
+       a fresh project. The artifacts stay readable under .archive/.
+   Nothing is deleted. Proceed? (yes/no)
+   ```
+   If `archived_dir` carries a numeric suffix, say so — it means a previous
+   archive of this slug already exists. If the learner declines, stop — change
+   nothing (the dry-run has already left the filesystem untouched).
+
+4. **Run the tool for real**, with today's date (passed in so the tool stays
+   deterministic):
+   ```bash
+   python3 "$SAGE_ROOT/tools/archive_project.py" "<learning_root>" "<slug>" --date "$(date +%Y-%m-%d)"
+   ```
+   It recomputes the plan from scratch rather than trusting the dry-run, then
+   executes it.
+
+5. **Report the result** from the tool's JSON summary (`status: "archived"`) —
+   same fields as the plan. Then stop; archival is a complete, standalone action.
 
 ### Eager-Load References
 

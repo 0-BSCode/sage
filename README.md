@@ -25,7 +25,7 @@ Sage runs inside Claude Code and turns study into active recall, Socratic coachi
 ## See it in action
 
 ```
-You:  /sage async programming
+You:  /sage learn async programming
 Sage: Before I design your plan, I need to understand your learning
       landscape. What's your current experience with async? What does
       success look like? What do you expect to be hardest?
@@ -63,24 +63,64 @@ Sage: Good instinct. But you said it's offloaded to "another stack."
 
 ## Usage
 
+Every command takes a verb: `/sage learn <topic>` or `/sage archive <topic>`.
+
 ### First session
 
 ```
-/sage <topic>
+/sage learn <topic>
 ```
 
 The coach starts by asking about your goals, prior knowledge, and how much time you have. It builds a structured learning plan from your answers, then jumps straight into teaching. Each session ends with a checkpoint, so you can close the terminal and come back anytime.
 
 Examples:
-- `/sage React hooks`
-- `/sage distributed systems`
-- `/sage statistics for ML`
+- `/sage learn React hooks`
+- `/sage learn distributed systems`
+- `/sage learn statistics for ML`
 
 ### Resuming
 
-Run `/sage <same topic>` again. The coach detects your existing artifacts, loads your last savepoint, handles any overdue reviews, then continues from where you stopped.
+Run `/sage learn <same topic>` again. The coach detects your existing artifacts, loads your last savepoint, handles any overdue reviews, then continues from where you stopped. To pick from a list instead, run `/sage learn` with no topic.
 
-If you hard-close the terminal mid-session, your previous sessions are safe (already checkpointed), but the current session's final state may be partially lost. Run `/resume` from the same directory to reopen the conversation where you left off, or run `/sage <topic>` to start a fresh session from the last completed checkpoint.
+If you hard-close the terminal mid-session, your previous sessions are safe (already checkpointed), but the current session's final state may be partially lost. Run `/resume` from the same directory to reopen the conversation where you left off, or run `/sage learn <topic>` to start a fresh session from the last completed checkpoint.
+
+### Archiving
+
+Retire a project you're done with so it stops cluttering your list:
+
+```
+/sage archive <topic>
+```
+
+Run `/sage archive` with no topic to pick from a list. The coach shows you exactly what will move and asks for confirmation first. Archiving moves the project's directory to a hidden `.archive/` folder under your learning root and tidies the cross-reference registry — **nothing is deleted**.
+
+**Archiving is one-way by design.** There's no `unarchive` command, and none is planned. Your artifacts stay readable under `.archive/<topic>/` for reference, but the tracking state — knowledge map, cards, SRS schedule — stops being used. Coming back to a topic means starting a fresh project with `/sage learn <topic>`. That's what the confirmation prompt is for: archive when you're genuinely done.
+
+<details>
+<summary><strong>Restoring an archived project by hand</strong></summary>
+
+Nothing is deleted, so you can always undo an archive manually. Each archived project keeps an `archive-meta.json` recording what was removed from the cross-reference index.
+
+```bash
+ROOT=<your learning root>
+SLUG=<archived topic>
+
+# 1. shard back to the registry
+mv "$ROOT/.archive/$SLUG/cross-refs.md" "$ROOT/cross-refs/$SLUG.md"
+
+# 2. read the stashed index fragments, then remove the archive artifact
+cat "$ROOT/.archive/$SLUG/archive-meta.json"
+rm "$ROOT/.archive/$SLUG/archive-meta.json"
+
+# 3. project back into place
+mv "$ROOT/.archive/$SLUG" "$ROOT/$SLUG"
+```
+
+Then hand-edit `cross-refs/INDEX.md`: re-add the project's own row from the meta's `index.own_row`, and add `$SLUG` back to the "Overlaps With" cell of each project listed under `index.inbound_rows`.
+
+⚠️ **Don't paste `index.inbound_rows[].row` back verbatim.** Those rows are snapshots from the moment of archival and may be stale — pasting one can resurrect a reference to a *different* project you archived later, which breaks that project's cross-ref loading. Add only `$SLUG` to each inbound project's *current* cell, and skip any `own_overlaps` entry whose project is no longer active.
+
+</details>
 
 ## Configuration
 
@@ -95,7 +135,7 @@ To point Sage at a different directory later, use any of these (highest preceden
    ```json
    { "learning_root": "/new/path", "version": 1 }
    ```
-3. **Re-trigger the first-run prompt** — delete `~/.config/sage/config.json`. The next `/sage <topic>` run will ask you to pick a directory again.
+3. **Re-trigger the first-run prompt** — delete `~/.config/sage/config.json`. The next `/sage learn <topic>` run will ask you to pick a directory again.
 
 Existing topic folders aren't moved automatically — if you want to keep past progress, move them into the new learning root yourself.
 
