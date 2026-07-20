@@ -2,8 +2,8 @@
 """Session router for Sage.
 
 Single entry point for every `/sage` invocation. The grammar is
-`/sage <verb> <topic>` with exactly two verbs, `learn` and `archive`
-(see adr/0002-mandatory-command-verbs.md). The router parses the verb,
+`/sage <verb> <topic>` with exactly two verbs, `learn` and `archive`.
+The verb is mandatory; there is no verb-less form. The router parses it,
 resolves config, and returns structured JSON so the coach can branch on
 `mode` without multiple tool calls. It is a read-only dispatcher — it
 never mutates the filesystem. Archival mutation lives in

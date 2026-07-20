@@ -6,7 +6,8 @@ under `<learning_root>/.archive/<slug>/`, co-locating its cross-ref shard
 there, and scrubbing every reference to it from the cross-refs `INDEX.md`.
 Archival is one-way-but-recoverable: nothing is deleted, and the removed
 INDEX fragments + provenance are stashed in `archive-meta.json` inside the
-archive directory. See adr/0003-archive-by-move-recoverable.md.
+archive directory. There is no `unarchive` verb, by design — recovery is a
+documented manual procedure, not a command.
 
 This tool is STATELESS and assumes a QUIESCENT project — the coach must
 checkpoint any live session for this slug before invoking it.
