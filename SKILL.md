@@ -15,8 +15,8 @@ $ARGUMENTS
 ## Step 0: Session Setup
 
 The command grammar is `/sage <verb> <topic>` with exactly two verbs — `learn`
-and `archive` (see `adr/0002-mandatory-command-verbs.md`). The router parses the
-leading verb. Run it, passing `$ARGUMENTS` verbatim (it already includes the verb):
+and `archive`. The verb is mandatory; there is no verb-less form. The router parses
+the leading verb. Run it, passing `$ARGUMENTS` verbatim (it already includes the verb):
 ```bash
 SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
 python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "$ARGUMENTS"
@@ -55,7 +55,7 @@ command and none is planned. Nothing is deleted (the artifacts stay readable for
 reference), but the learner is giving up the tracking state: knowledge map, cards,
 and SRS schedule. Coming back to the topic means starting a fresh project. Make sure
 the learner understands that before proceeding — it is the whole point of the
-confirmation. See `adr/0003-archive-by-move-recoverable.md`.
+confirmation.
 
 1. **Quiescent-project invariant.** `archive_project.py` only ever operates on an
    at-rest project. If the target `slug` is the project you have been teaching in
