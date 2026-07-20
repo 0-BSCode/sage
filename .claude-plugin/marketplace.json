@@ -11,7 +11,7 @@
       "name": "sage",
       "source": "./",
       "description": "Evidence-based learning coach with spaced repetition, retrieval practice, and mastery tracking",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "0-BSCode"
       },
