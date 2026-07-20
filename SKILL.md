@@ -60,7 +60,7 @@ confirmation.
 1. **Quiescent-project invariant.** `archive_project.py` only ever operates on an
    at-rest project. If the target `slug` is the project you have been teaching in
    *this* conversation and its state is unsaved, first run the full end-of-session
-   checklist (`docs/ref-session-end.md`) to persist journal, savepoint, and
+   checklist (`references/ref-session-end.md`) to persist journal, savepoint, and
    cross-refs. Only then proceed. (Cold targets — any project you are not actively
    teaching — are already quiescent; skip straight to step 2.)
 
