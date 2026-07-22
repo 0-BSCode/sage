@@ -1,0 +1,32 @@
+name: Tag release
+
+# Merging to main is publishing (see docs/RELEASING.md). This workflow gives
+# every published version a checkout-able identity: it tags v<version> from
+# plugin.json if that tag does not already exist. Tags are never cut by hand.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag v<version> from plugin.json if missing
+        run: |
+          version=$(jq -r .version .claude-plugin/plugin.json)
+          tag="v$version"
+          if git ls-remote --tags origin "refs/tags/$tag" | grep -q .; then
+            echo "$tag already exists; nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "Release $tag"
+          git push origin "$tag"
