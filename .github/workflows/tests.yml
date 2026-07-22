@@ -22,3 +22,62 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+  release-hygiene:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version fields must match (plugin.json is authoritative)
+        run: |
+          plugin=$(jq -r .version .claude-plugin/plugin.json)
+          marketplace=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          if [ "$plugin" != "$marketplace" ]; then
+            echo "::error::marketplace.json ($marketplace) must mirror plugin.json ($plugin) — see docs/RELEASING.md"
+            exit 1
+          fi
+          echo "Versions in sync: $plugin"
+
+      - name: Shipping changes must bump version and update changelog
+        if: github.event_name == 'pull_request'
+        run: |
+          base="origin/${{ github.base_ref }}"
+          base_version=$(git show "$base":.claude-plugin/plugin.json | jq -r .version)
+          head_version=$(jq -r .version .claude-plugin/plugin.json)
+
+          # Shipped files. Manifest edits count only when something OTHER than
+          # the version fields changed — otherwise a bump alone would make a
+          # docs-only PR look like a shipping change and dodge the rejection.
+          shipped=$(git diff --name-only "$base"...HEAD -- SKILL.md agents hooks references tools)
+          for f in $(git diff --name-only "$base"...HEAD -- .claude-plugin); do
+            case "$f" in
+              .claude-plugin/plugin.json)      strip='del(.version)' ;;
+              .claude-plugin/marketplace.json) strip='del(.plugins[].version)' ;;
+              *) shipped="$shipped"$'\n'"$f"; continue ;;
+            esac
+            if [ "$(git show "$base":"$f" | jq "$strip")" != "$(jq "$strip" "$f")" ]; then
+              shipped="$shipped"$'\n'"$f"
+            fi
+          done
+          shipped=$(printf '%s\n' "$shipped" | grep -v '^$' || true)
+          if [ -z "$shipped" ]; then
+            if [ "$base_version" != "$head_version" ]; then
+              echo "::error::Version bumped ($base_version -> $head_version) but no shipped files changed — docs/tests/CI-only changes must not bump the version. See docs/RELEASING.md"
+              exit 1
+            fi
+            echo "No shipping changes; no bump required."
+            exit 0
+          fi
+          if [ "$base_version" = "$head_version" ]; then
+            echo "::error::Shipping change without a version bump (still $head_version). See docs/RELEASING.md. Shipped files changed:"
+            echo "$shipped"
+            exit 1
+          fi
+          if [ -z "$(git diff --name-only "$base"...HEAD -- CHANGELOG.md)" ]; then
+            echo "::error::Version bumped to $head_version but CHANGELOG.md was not updated — see docs/RELEASING.md"
+            exit 1
+          fi
+          echo "Shipping change OK: $base_version -> $head_version with changelog entry."
