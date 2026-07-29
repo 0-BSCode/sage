@@ -107,11 +107,6 @@ def resolve_transcript(session_id="", cwd=None):
     )
 
 
-def find_transcript(session_id="", cwd=None):
-    """Path to the transcript, or None. Thin wrapper over resolve_transcript()."""
-    return resolve_transcript(session_id, cwd)[0]
-
-
 def parse_timestamps(path):
     stamps = []
     with open(path) as f:
@@ -174,11 +169,6 @@ def compute(session_id="", cwd=None):
     start, end = sitting
     ms = int((end - start).total_seconds() * 1000)
     return fmt_duration(ms), None, warning
-
-
-def run(session_id="", cwd=None):
-    """Formatted duration, or None. Thin wrapper over compute()."""
-    return compute(session_id, cwd)[0]
 
 
 def main():

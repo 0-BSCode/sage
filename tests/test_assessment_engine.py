@@ -267,7 +267,7 @@ class TestAdaptiveSelector(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             bank, km, _ = self._make_bank_and_km(tmpdir)
             # useRef has never been assessed and has no questions
-            priority = AdaptiveSelector.concept_priority("useRef", bank, "not started", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("useRef", bank, "2026-02-12")
             # recency=5.0 (never assessed) + weakness=0.0 (no questions) + coverage=2.0 (< 3 questions)
             self.assertAlmostEqual(priority, 7.0, places=1)
 
@@ -282,7 +282,7 @@ class TestAdaptiveSelector(unittest.TestCase):
                 "last_assessed": "2026-02-12",
                 "assessment_count": 3,
             }
-            priority = AdaptiveSelector.concept_priority("useState", bank, "solid", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("useState", bank, "2026-02-12")
             # recency=0.0 (assessed today) + weakness=0.0 (no asked questions) + coverage=0.0 (>=5)
             self.assertAlmostEqual(priority, 0.0, places=1)
 
@@ -294,7 +294,7 @@ class TestAdaptiveSelector(unittest.TestCase):
             QuestionBank.record_result(bank, "q-1", 0, today="2026-02-12")
             QuestionBank.record_result(bank, "q-1", 0, today="2026-02-12")
             # success_rate = 0.0 < 0.5 => weakness_weight = 3.0
-            priority = AdaptiveSelector.concept_priority("closures", bank, "developing", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("closures", bank, "2026-02-12")
             # recency from coverage last_assessed = today => 0/7=0.0
             # weakness = 3.0 (avg success 0.0 < 0.5)
             # coverage: total_questions for closures = 1 => coverage_weight = 2.0
@@ -308,7 +308,7 @@ class TestAdaptiveSelector(unittest.TestCase):
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
-            priority = AdaptiveSelector.concept_priority("useState", bank, "solid", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("useState", bank, "2026-02-12")
             # success_rate = 1.0 >= 0.7 => weakness = 0.0
             # Check weakness doesn't contribute
             # recency depends on coverage last_assessed
@@ -319,12 +319,12 @@ class TestAdaptiveSelector(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             bank, km, _ = self._make_bank_and_km(tmpdir)
             # useEffect has 0 questions => coverage_weight = 2.0
-            p1 = AdaptiveSelector.concept_priority("useEffect", bank, "introduced", "2026-02-12")
+            p1 = AdaptiveSelector.concept_priority("useEffect", bank, "2026-02-12")
             # Add 3 questions
             for i in range(3):
                 QuestionBank.add_question(bank, "useEffect", 1, "free_recall",
                                           f"Q{i}?", f"A{i}", today="2026-02-12")
-            p2 = AdaptiveSelector.concept_priority("useEffect", bank, "introduced", "2026-02-12")
+            p2 = AdaptiveSelector.concept_priority("useEffect", bank, "2026-02-12")
             # After 3 questions, coverage_weight drops from 2.0 to 1.0
             self.assertGreater(p1, p2)
 
@@ -395,7 +395,7 @@ class TestAdaptiveSelector(unittest.TestCase):
                                       "Unasked question", "A2", today="2026-02-10")
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-11")
 
-            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual", "2026-02-12")
+            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual")
             self.assertIsNotNone(result)
             self.assertEqual(result["question_id"], "q-2")  # prefer unasked
 
@@ -410,7 +410,7 @@ class TestAdaptiveSelector(unittest.TestCase):
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-01")
             QuestionBank.record_result(bank, "q-2", 1, today="2026-02-11")
 
-            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual", "2026-02-12")
+            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual")
             self.assertIsNotNone(result)
             self.assertEqual(result["question_id"], "q-1")  # older last_asked
 

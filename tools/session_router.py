@@ -99,26 +99,6 @@ def derive_slug(topic):
     return slug.strip("-")
 
 
-def find_journal(topic_path):
-    """Check for existing journal. Returns path if found, None otherwise."""
-    current = os.path.join(topic_path, "journal", "index.md")
-    if os.path.isfile(current):
-        return current
-    return None
-
-
-def find_plan(topic_path):
-    """Check for a learning plan — the marker of an initialized project.
-
-    Returns the path if found, None otherwise. This is the archivability
-    predicate: a project counts as archivable once it has a plan, even if
-    no session ever ran."""
-    plan = os.path.join(topic_path, "plan.md")
-    if os.path.isfile(plan):
-        return plan
-    return None
-
-
 def suggest_slug(slug, learning_root):
     """Closest archivable project slug to a no-match archive target, or None."""
     existing = [p["slug"] for p in list_projects(learning_root, require="plan")]
@@ -129,6 +109,9 @@ def suggest_slug(slug, learning_root):
 def _unknown_verb(verb, topic, sage_root):
     """Build a helpful error for an unrecognized leading verb."""
     if verb in LEGACY_RESUME_KEYWORDS:
+        # Without this branch the generic message below reads
+        # "`/sage learn continue` to learn it" — it would interpolate the
+        # keyword as if it were a topic name.
         hint = f"/sage learn {topic}".strip()
         message = f"'{verb}' is no longer a command. Did you mean `{hint}`?"
         suggestion = "learn"
@@ -193,10 +176,10 @@ def route(sage_root, raw_args):
     slug = derive_slug(topic)
     project_path = os.path.join(learning_root_str, slug)
     topic_path = os.path.join(project_path, "learning")
-    journal = find_journal(topic_path)
+    has_journal = os.path.isfile(os.path.join(topic_path, "journal", "index.md"))
 
     if verb == "learn":
-        if journal:
+        if has_journal:
             has_insights = os.path.isfile(
                 os.path.join(topic_path, "coach-insights.md")
             )
@@ -220,7 +203,7 @@ def route(sage_root, raw_args):
 
     # verb == "archive": target must resolve to an initialized project
     # (has a learning plan) — session history is not required.
-    if not find_plan(topic_path):
+    if not os.path.isfile(os.path.join(topic_path, "plan.md")):
         return {
             "mode": "archive_no_match",
             "slug": slug,

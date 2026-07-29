@@ -53,6 +53,8 @@ class TestVerbDispatch(RouterTestCase):
         out = sr.route("/sage", "continue")
         self.assertEqual(out["mode"], "unknown_verb")
         self.assertEqual(out["suggestion"], "learn")
+        # The generic branch would read "`/sage learn continue` to learn it".
+        self.assertNotIn("learn continue", out["message"])
 
 
 class TestDiscoveryPredicates(RouterTestCase):

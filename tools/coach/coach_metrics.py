@@ -16,7 +16,6 @@ Zero external dependencies — Python 3.8+ stdlib only.
 import argparse
 import json
 import re
-import sys
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple

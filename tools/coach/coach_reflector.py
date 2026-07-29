@@ -13,10 +13,9 @@ Zero external dependencies — Python 3.8+ stdlib only.
 import argparse
 import json
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 # Same directory, so sys.path[0] already covers this when run as a script.
 from coach_metrics import parse_current_session

@@ -491,26 +491,9 @@ def main() -> None:
         "--weak-spots", required=True,
         help="Path to weak-spots.md"
     )
-    parser.add_argument("--stale-ws-threshold", type=int, default=None)
-    parser.add_argument("--flat-grade-window", type=int, default=None)
-    parser.add_argument("--flat-grade-threshold", type=float, default=None)
-    parser.add_argument("--mode-staleness-threshold", type=int, default=None)
-    parser.add_argument("--plateau-min-rules", type=int, default=None)
-
     args = parser.parse_args()
 
-    # Build thresholds with overrides
     thresholds = dict(THRESHOLDS)
-    if args.stale_ws_threshold is not None:
-        thresholds["stale_ws_sessions"] = args.stale_ws_threshold
-    if args.flat_grade_window is not None:
-        thresholds["flat_grade_window"] = args.flat_grade_window
-    if args.flat_grade_threshold is not None:
-        thresholds["flat_grade_threshold"] = args.flat_grade_threshold
-    if args.mode_staleness_threshold is not None:
-        thresholds["mode_staleness_sessions"] = args.mode_staleness_threshold
-    if args.plateau_min_rules is not None:
-        thresholds["plateau_signal_min_rules"] = args.plateau_min_rules
 
     journal_dir = Path(args.journal_dir)
     srs_path = Path(args.srs)

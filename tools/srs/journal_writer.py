@@ -52,16 +52,13 @@ TITLE_LINE = "# Session Index"
 # Parsing
 # ---------------------------------------------------------------------------
 
-def _parse_table(text: str) -> Tuple[Optional[List[str]], List[List[str]], str, str]:
+def _parse_table(text: str) -> Tuple[Optional[List[str]], List[List[str]]]:
     """Parse a markdown table from text.
 
-    Returns:
-        (headers, rows, pre_table_text, post_table_text)
-        headers is None if no table found.
+    Returns (headers, rows). headers is None if no table found.
     """
     lines = text.split("\n")
     table_start = None
-    table_end = None
     headers: Optional[List[str]] = None
     rows: List[List[str]] = []
 
@@ -79,20 +76,14 @@ def _parse_table(text: str) -> Tuple[Optional[List[str]], List[List[str]], str, 
             # Data row
             cells = [c.strip() for c in stripped.strip("|").split("|")]
             rows.append(cells)
-            table_end = i
         elif table_start is not None and not stripped.startswith("|"):
             # End of table
             break
 
     if table_start is None:
-        return None, [], text, ""
+        return None, []
 
-    if table_end is None:
-        table_end = table_start + 1  # just header + separator
-
-    pre = "\n".join(lines[:table_start])
-    post = "\n".join(lines[table_end + 1:])
-    return headers, rows, pre, post
+    return headers, rows
 
 
 def _map_headers(source_headers: List[str]) -> List[Optional[str]]:
@@ -129,7 +120,7 @@ def cmd_append(path: Path, row_json: Dict[str, Any]) -> None:
         path.write_text(text, encoding="utf-8")
 
     text = path.read_text(encoding="utf-8")
-    headers, rows, pre, post = _parse_table(text)
+    headers, rows = _parse_table(text)
 
     # Build the new row
     session_num = row_json.get("session_number", "")

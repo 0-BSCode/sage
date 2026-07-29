@@ -21,7 +21,7 @@ import hashlib
 import json
 import re
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -701,12 +701,8 @@ COMMANDS = {
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    handler = COMMANDS.get(args.command)
-    if not handler:
-        parser.print_help()
-        return 1
     try:
-        result = handler(args)
+        result = COMMANDS[args.command](args)
         print(result)
         return 0
     except Exception as e:

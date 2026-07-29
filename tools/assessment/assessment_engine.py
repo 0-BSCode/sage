@@ -22,7 +22,7 @@ import re
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +245,7 @@ class AdaptiveSelector:
 
     @staticmethod
     def concept_priority(concept: str, bank: Dict[str, Any],
-                         mastery: str, today: str) -> float:
+                         today: str) -> float:
         """Compute priority score for a concept."""
         cov = bank.get("coverage", {}).get(concept, {})
 
@@ -328,8 +328,7 @@ class AdaptiveSelector:
 
     @staticmethod
     def select_from_bank(bank: Dict[str, Any], concept: str,
-                         difficulty: int, qtype: str,
-                         today: str) -> Optional[Dict[str, Any]]:
+                         difficulty: int, qtype: str) -> Optional[Dict[str, Any]]:
         """Find the best existing question from the bank.
 
         Returns the question dict, or None if no suitable question exists.
@@ -397,7 +396,7 @@ class AdaptiveSelector:
             scored = []
             for c, info in concepts.items():
                 mastery = info.get("status", "introduced")
-                priority = AdaptiveSelector.concept_priority(c, bank, mastery, today)
+                priority = AdaptiveSelector.concept_priority(c, bank, today)
                 scored.append((priority, MASTERY_ORDER.index(mastery) if mastery in MASTERY_ORDER else 0, c))
             # Sort by priority desc, then mastery asc (lower mastery = more need)
             scored.sort(key=lambda x: (-x[0], x[1]))
@@ -415,7 +414,7 @@ class AdaptiveSelector:
             qtype = AdaptiveSelector.select_question_type(mastery, bank, concept)
 
             # Step 4: Bank lookup
-            question = AdaptiveSelector.select_from_bank(bank, concept, difficulty, qtype, today)
+            question = AdaptiveSelector.select_from_bank(bank, concept, difficulty, qtype)
 
             if question and question["question_id"] not in used_qids:
                 used_qids.add(question["question_id"])
@@ -689,12 +688,8 @@ COMMANDS = {
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    handler = COMMANDS.get(args.command)
-    if not handler:
-        parser.print_help()
-        return 1
     try:
-        result = handler(args)
+        result = COMMANDS[args.command](args)
         print(result)
         return 0
     except Exception as e:

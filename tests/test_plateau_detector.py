@@ -288,9 +288,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
     assert_eq("staleness count is 2 (broken by deep)", 2, r["consecutive_recall_sessions"])
     assert_eq("staleness does not fire", False, r["rules"]["mode_staleness"])
 
-# --- Threshold overrides ---
+# --- Default thresholds ---
 print()
-print("  [threshold overrides]")
+print("  [default thresholds]")
 
 with tempfile.TemporaryDirectory() as tmpdir:
     f = Fixtures(tmpdir)
@@ -305,10 +305,6 @@ with tempfile.TemporaryDirectory() as tmpdir:
     # Default threshold is 4, so 3 sessions shouldn't fire
     r = f.run()
     assert_eq("3 sessions below default threshold", False, r["rules"]["mode_staleness"])
-
-    # Override threshold to 2
-    r = f.run(extra_args=["--mode-staleness-threshold", "2"])
-    assert_eq("3 sessions above overridden threshold", True, r["rules"]["mode_staleness"])
 
 # --- All three rules fire → PLATEAU_LIKELY + interleaved ---
 print()

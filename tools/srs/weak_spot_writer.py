@@ -61,7 +61,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
 # Kinds
@@ -86,19 +86,12 @@ KIND_TO_FILENAME = {
     KIND_CP: "coach-errors.md",
 }
 
-COACH_KINDS = {KIND_CE, KIND_CP}
-
 VALID_CATEGORIES = frozenset({
     "wrong-model",
     "incomplete-model",
     "fragile-recall",
     "application-gap",
 })
-
-
-def _heading_separator(kind: str) -> str:
-    """All kinds use hyphen: WS-1, CE-1, CP-1."""
-    return "-"
 
 
 # ---------------------------------------------------------------------------
@@ -162,8 +155,7 @@ def _format_entry(
 ) -> str:
     """Format a single entry in canonical format for the given kind."""
     canonical = _canonical_fields(kind)
-    sep = _heading_separator(kind)
-    lines = [f"## {kind}{sep}{number} — {description}", ""]
+    lines = [f"## {kind}-{number} — {description}", ""]
     for field_name in canonical:
         value = fields.get(field_name, "")
         if value and value.strip() and value.strip() != "—":
@@ -370,7 +362,7 @@ def cmd_append(
     content += "\n\n" + formatted + "\n"
 
     path.write_text(content, encoding="utf-8")
-    label = f"{kind}{_heading_separator(kind)}{new_n}"
+    label = f"{kind}-{new_n}"
     print(f"Appended {label} — {description} to {path}")
 
 

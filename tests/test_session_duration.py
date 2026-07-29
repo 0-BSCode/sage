@@ -123,7 +123,7 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
     def test_find_prefers_session_id(self):
         self._write_transcript("aaa.jsonl", ["2026-01-01T00:00:00Z"])
         self._write_transcript("bbb.jsonl", ["2026-01-02T00:00:00Z"])
-        found = sd.find_transcript(session_id="aaa", cwd=self.cwd)
+        found = sd.resolve_transcript("aaa", self.cwd)[0]
         self.assertTrue(found.endswith("aaa.jsonl"))
 
     def test_find_falls_back_to_most_recent(self):
@@ -131,7 +131,7 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
         new = self._write_transcript("new.jsonl", ["2026-01-02T00:00:00Z"])
         os.utime(old, (1_000_000, 1_000_000))
         os.utime(new, (2_000_000, 2_000_000))
-        found = sd.find_transcript(session_id="", cwd=self.cwd)
+        found = sd.resolve_transcript("", self.cwd)[0]
         self.assertTrue(found.endswith("new.jsonl"))
 
     def test_run_end_to_end_last_sitting(self):
@@ -145,10 +145,10 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
                 "2026-01-01T01:30:00Z",
             ],
         )
-        self.assertEqual(sd.run(session_id="s", cwd=self.cwd), "25m00s")
+        self.assertEqual(sd.compute(session_id="s", cwd=self.cwd)[0], "25m00s")
 
     def test_run_missing_transcript_returns_none(self):
-        self.assertIsNone(sd.run(session_id="nope", cwd="/no/such/project"))
+        self.assertIsNone(sd.compute(session_id="nope", cwd="/no/such/project")[0])
 
     def test_end_is_last_timestamp_not_now(self):
         # A single sitting entirely in the distant past. If the end were derived
@@ -158,7 +158,7 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
             "past.jsonl",
             ["2020-01-01T00:00:00Z", "2020-01-01T00:10:00Z"],
         )
-        self.assertEqual(sd.run(session_id="past", cwd=self.cwd), "10m00s")
+        self.assertEqual(sd.compute(session_id="past", cwd=self.cwd)[0], "10m00s")
 
     # --- ADR-0004: resolve by session id, never by cwd ---
 
@@ -170,7 +170,7 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
             "abc-123.jsonl",
             ["2026-01-01T00:00:00Z", "2026-01-01T00:15:00Z"],
         )
-        self.assertEqual(sd.run(session_id="abc-123", cwd="/tmp/somewhere/else"), "15m00s")
+        self.assertEqual(sd.compute(session_id="abc-123", cwd="/tmp/somewhere/else")[0], "15m00s")
 
     def test_unknown_id_fails_even_when_cwd_dir_exists(self):
         # Pre-fix this silently returned the newest transcript's duration, exit 0.
@@ -183,13 +183,13 @@ class TestTranscriptLookupAndRun(unittest.TestCase):
     def test_env_var_used_when_no_argument(self):
         self._write_transcript("from-env.jsonl", ["2026-01-01T00:00:00Z", "2026-01-01T00:20:00Z"])
         os.environ[sd.SESSION_ID_ENV] = "from-env"
-        self.assertEqual(sd.run(cwd="/tmp/somewhere/else"), "20m00s")
+        self.assertEqual(sd.compute(cwd="/tmp/somewhere/else")[0], "20m00s")
 
     def test_argument_overrides_env_var(self):
         self._write_transcript("from-env.jsonl", ["2026-01-01T00:00:00Z", "2026-01-01T00:20:00Z"])
         self._write_transcript("from-argv.jsonl", ["2026-01-01T00:00:00Z", "2026-01-01T00:05:00Z"])
         os.environ[sd.SESSION_ID_ENV] = "from-env"
-        self.assertEqual(sd.run(session_id="from-argv", cwd=self.cwd), "5m00s")
+        self.assertEqual(sd.compute(session_id="from-argv", cwd=self.cwd)[0], "5m00s")
 
     def test_error_names_the_id_source(self):
         _, from_argv, _ = sd.compute(session_id="nope", cwd=self.cwd)
