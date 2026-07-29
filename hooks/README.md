@@ -1,14 +1,14 @@
 # Sage Hooks
 
-## Debug Log
+## Debugging
 
-All hook scripts write timestamped traces to `/tmp/sage-hook-debug.log`. Check this file to verify whether hooks fired and which branch they took.
+To see whether a hook fired and which branch it took, run it under `bash -x`
+with a sample event on stdin:
 
 ```bash
-cat /tmp/sage-hook-debug.log
+echo '{"session_id":"test","cwd":"'"$PWD"'","stop_hook_active":false}' \
+  | bash -x hooks/scripts/enforce-cross-refs.sh
 ```
-
-Each entry: `HH:MM:SS <hook-name>: <outcome>`.
 
 ## Hook Reference
 

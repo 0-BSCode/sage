@@ -47,7 +47,7 @@ After all post-checkpoint work is complete, run the wrapup script:
 
 ```bash
 SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
-python3 "$SAGE_ROOT/tools/session_wrapup.py" "$SAGE_ROOT" "<topic_path>" "<topic-slug>"
+python3 "$SAGE_ROOT/tools/session_wrapup.py" "$SAGE_ROOT" "<topic_path>"
 ```
 
 If `coach_metrics_flags` is non-empty, mention the flags in your session summary.

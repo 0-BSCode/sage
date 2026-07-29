@@ -55,7 +55,7 @@ def _run_validate(demos_dir):
 
 
 class TestAppendCreatesNewIndex(unittest.TestCase):
-    """append — creates new index.html from scratch."""
+    """append — creates new index.md from scratch."""
 
     def test_creates_index_when_none_exists(self):
         with tempfile.TemporaryDirectory() as demos_dir:
@@ -69,14 +69,14 @@ class TestAppendCreatesNewIndex(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertIn("Appended", result.stdout)
 
-            index_path = demos / "index.html"
+            index_path = demos / "index.md"
             self.assertTrue(index_path.exists())
 
-            html = index_path.read_text()
-            self.assertIn("WS-1", html)
-            self.assertIn("test weak spot", html)
-            self.assertIn("Test Demo", html)
-            self.assertIn("test-demo.html", html)
+            text = index_path.read_text()
+            self.assertIn("WS-1", text)
+            self.assertIn("test weak spot", text)
+            self.assertIn("Test Demo", text)
+            self.assertIn("test-demo.html", text)
 
     def test_creates_index_via_stdin(self):
         with tempfile.TemporaryDirectory() as demos_dir:
@@ -87,7 +87,7 @@ class TestAppendCreatesNewIndex(unittest.TestCase):
             result = _run_append(demos_dir, entry, use_stdin=True)
 
             self.assertEqual(result.returncode, 0)
-            self.assertTrue((demos / "index.html").exists())
+            self.assertTrue((demos / "index.md").exists())
 
 
 class TestAppendDeduplication(unittest.TestCase):
@@ -117,9 +117,9 @@ class TestAppendDeduplication(unittest.TestCase):
             self.assertIn("Updated", result.stdout)
             self.assertIn("Total entries: 1", result.stdout)
 
-            html = (demos / "index.html").read_text()
-            self.assertIn("Updated Title", html)
-            self.assertNotIn("Original Title", html)
+            text = (demos / "index.md").read_text()
+            self.assertIn("Updated Title", text)
+            self.assertNotIn("Original Title", text)
 
 
 class TestAppendSortsByDate(unittest.TestCase):
@@ -146,10 +146,10 @@ class TestAppendSortsByDate(unittest.TestCase):
                 created="2026-02-01"
             ))
 
-            html = (demos / "index.html").read_text()
-            pos_first = html.index("WS-1")
-            pos_second = html.index("WS-2")
-            pos_third = html.index("WS-3")
+            text = (demos / "index.md").read_text()
+            pos_first = text.index("WS-1")
+            pos_second = text.index("WS-2")
+            pos_third = text.index("WS-3")
 
             self.assertLess(pos_first, pos_second)
             self.assertLess(pos_second, pos_third)
@@ -168,8 +168,8 @@ class TestAppendMissingReference(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0)
 
-            html = (demos / "index.html").read_text()
-            self.assertIn("No reference doc yet", html)
+            text = (demos / "index.md").read_text()
+            self.assertIn("No reference doc yet", text)
 
     def test_omitted_reference_placeholder(self):
         with tempfile.TemporaryDirectory() as demos_dir:
@@ -187,8 +187,8 @@ class TestAppendMissingReference(unittest.TestCase):
             result = _run_append(demos_dir, entry)
 
             self.assertEqual(result.returncode, 0)
-            html = (demos / "index.html").read_text()
-            self.assertIn("No reference doc yet", html)
+            text = (demos / "index.md").read_text()
+            self.assertIn("No reference doc yet", text)
 
 
 class TestValidatePassesOnValid(unittest.TestCase):
@@ -238,7 +238,7 @@ class TestValidateReportsMissingFiles(unittest.TestCase):
 
 
 class TestValidateNoIndex(unittest.TestCase):
-    """validate — fails when index.html does not exist."""
+    """validate — fails when index.md does not exist."""
 
     def test_missing_index_exits_with_error(self):
         with tempfile.TemporaryDirectory() as demos_dir:

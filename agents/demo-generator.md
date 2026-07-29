@@ -154,7 +154,7 @@ Write to `docs/demos/<weak-spot-slug>.html`.
 
 ### Step 7: Update the demo index
 
-Do NOT write to `docs/demos/index.html` directly. Use the `demo_index_writer.py` script which guarantees canonical HTML format, handles deduplication by WS-number, and creates the index file if it doesn't exist.
+Do NOT write to `docs/demos/index.md` directly. Use the `demo_index_writer.py` script which guarantees canonical markdown format, handles deduplication by WS-number, and creates the index file if it doesn't exist.
 
 Build a JSON object from the demo metadata and pipe it to the script:
 ```bash
@@ -173,6 +173,10 @@ Where `<json>` is:
 }
 ```
 All fields except `related_reference` are required. If no related reference doc exists, omit the field or pass an empty string.
+
+If the index looks wrong — a demo file listed that no longer exists, or an entry
+that vanished — `demo_index_writer.py validate <path>/docs/demos/` reports the
+problems without modifying anything.
 
 ### Step 8: Return confirmation
 
@@ -209,7 +213,7 @@ Updates:
 1. Read the existing demo file from `docs/demos/`
 2. Read current state of `weak-spots.md` to get updated weak spot details
 3. Apply the requested updates while preserving the interaction design
-4. Update the index entry in `docs/demos/index.html`
+4. Update the index entry in `docs/demos/index.md`
 5. Return a confirmation showing what changed
 
 ---

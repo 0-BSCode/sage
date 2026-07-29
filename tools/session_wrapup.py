@@ -9,7 +9,7 @@ Bundles post-checkpoint scripts into a single invocation:
 Each step catches failures independently — partial results are returned.
 
 Usage:
-    python3 session_wrapup.py <sage_root> <topic_path> <topic_slug> [--session-id SESSION_ID]
+    python3 session_wrapup.py <sage_root> <topic_path> [--session-id SESSION_ID]
 
 Zero external dependencies — Python 3.8+ stdlib only.
 """
@@ -38,10 +38,7 @@ def run_script(cmd, label):
         return False, f"{label} failed: {e}"
 
 
-def run(sage_root, topic_path, topic_slug, session_id=""):
-    # TODO: remove topic_slug — dead since session token metrics were removed (it only
-    # named the /tmp metrics file). Removal is a CLI change: also update argv parsing,
-    # both usage strings, and the caller in references/ref-session-end.md.
+def run(sage_root, topic_path, session_id=""):
     errors = []
     coach_metrics_flags = []
     insight_updates = []
@@ -100,16 +97,15 @@ def run(sage_root, topic_path, topic_slug, session_id=""):
 
 
 def main():
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(
-            "Usage: session_wrapup.py <sage_root> <topic_path> <topic_slug> [--session-id ID]",
+            "Usage: session_wrapup.py <sage_root> <topic_path> [--session-id ID]",
             file=sys.stderr,
         )
         sys.exit(1)
 
     sage_root = sys.argv[1]
     topic_path = sys.argv[2]
-    topic_slug = sys.argv[3]
 
     session_id = ""
     if "--session-id" in sys.argv:
@@ -117,7 +113,7 @@ def main():
         if idx + 1 < len(sys.argv):
             session_id = sys.argv[idx + 1]
 
-    result = run(sage_root, topic_path, topic_slug, session_id)
+    result = run(sage_root, topic_path, session_id)
     print(json.dumps(result, indent=2))
 
 

@@ -47,7 +47,7 @@ The `Project:` field is optional. When provided, use it as the canonical project
    - `coach-insights.md` — coach behavioral rules. Read this file. If it does not exist, note "None — file not present" in the Coach Insights section.
    - `metrics/dashboard.md` (coach effectiveness metrics, if present)
    - `docs/references/index.md` (reference document index, if it exists)
-   - `docs/demos/index.html` (demo index, if it exists)
+   - `docs/demos/index.md` (demo index, if it exists)
    - `../capstone/capstone.md` (capstone project spec, if it exists — lives in `capstone/` sibling to `learning/`)
    - `cross-refs/INDEX.md` (cross-project topic registry index — look for the `cross-refs/` directory by walking up from the learning path to the repo root. Search up to 4 parent directories from the specified path.)
    - From INDEX.md, find the current project's row and load `cross-refs/<current-project>.md` plus each file listed in the "Overlaps With" column. From overlapping project files, extract only rows where the current project appears in "Also Covered In."
@@ -423,6 +423,9 @@ Where `<json>` is:
   python3 "$SAGE_ROOT/tools/srs/card_writer.py" fix <path>/cards.md
   ```
   This normalizes all cards to canonical compact format. Run this even if no new cards were added — it catches drift from prior sessions.
+- **Manual repair only:** if a hand-edit is suspected of breaking `cards.md`,
+  `card_writer.py validate <path>/cards.md` reports what is wrong without
+  changing anything. It is a diagnostic — `fix` is what repairs.
 
 ### Step 5: Run SRS sync
 ```bash
@@ -728,7 +731,7 @@ Duration: <wall time, e.g. "42m15s">
 All artifact formats are defined in the Sage skill. You must match them exactly:
 - Journal entry format: One file per session in `journal/session-NN.md`, starting with `## Session N — YYYY-MM-DD` with subsections
 - Journal index: NEVER write to `journal/index.md` directly. Use `journal_writer.py append <path> --stdin`. Canonical 8-column format: `| # | Date | Type | Focus | Reviews | Avg Grade | Summary | File |`.
-- Knowledge map: markdown table with columns `| Concept | Status | Introduced | Last Tested | Notes |`. The `Introduced` column is set once when a concept is first added (`S<N>` or `prior`) and never modified. Concepts table rows are managed by `kmap_writer.py` — use `add-concept` to add new rows and `update-status` to change status/last-tested/notes (preserves Introduced automatically). Status legend and Status Changelog use `fix-legend`, `ensure-sections`, `changelog-append` subcommands. Weak spot tracking has moved to `weak-spots.md` via `weak_spot_writer.py`.
+- Knowledge map: markdown table with columns `| Concept | Status | Introduced | Last Tested | Notes |`. The `Introduced` column is set once when a concept is first added (`S<N>` or `prior`) and never modified. Concepts table rows are managed by `kmap_writer.py` — use `add-concept` to add new rows and `update-status` to change status/last-tested/notes (preserves Introduced automatically). The Status Changelog uses the `changelog-append` subcommand. Weak spot tracking has moved to `weak-spots.md` via `weak_spot_writer.py`.
 - Cross-refs: table columns are exactly `| Concept | Also Covered In | Status | Notes |`. Do not rename or reorder columns.
 - Cards: NEVER write to `cards.md` directly. Use `card_writer.py append <path> --stdin`. Canonical format: `**Q:**`, `**A:**`, `**Tags:**`.
 - Weak spots and coach errors: NEVER write entries directly to `weak-spots.md` or `coach-errors.md`. Use `weak_spot_writer.py append --kind <WS|M|CE|CP> <path> --stdin`. Kind routes the entry to the correct file and prefix namespace. The writer refuses to write a coach entry to `weak-spots.md` and vice versa. Canonical formats: learner `## WS-[N] — [description]` (with Category, Correct model, History subsection), coach content `## CE-[N] — [description]`, coach process `## CP-[N] — [description]`. WS field set: Category, Session, Last tested, What happened, Correct model, Why it matters, Cards, Concepts, Status + History subsection. CE/CP field set: Session, What happened, Root cause, Correction, Why it matters, Follow-up, Source, Cards, Status.

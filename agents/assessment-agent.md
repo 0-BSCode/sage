@@ -15,6 +15,27 @@ SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
 ```
 Then use `$SAGE_ROOT/tools/...` in all subsequent commands within the same bash call.
 
+## The Question Bank
+
+Every operation below reads or writes `questions.json`, the per-topic question
+bank. It does not exist until it is created, and every other subcommand fails
+with `Error: … not found. Run \`init\` first.` until it does.
+
+**Create it once, on first use for a topic:**
+```bash
+SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
+python3 "$SAGE_ROOT/tools/assessment/assessment_engine.py" init <path>
+```
+`init` reads the topic's `knowledge-map.md` and seeds one coverage entry per
+concept. It refuses to overwrite an existing bank without `--force`, so running
+it when unsure is safe.
+
+**`<path>` is always the `learning/` directory** — `<topic-slug>/learning/`,
+never the topic directory above it. The engine resolves any non-directory
+argument to its parent, so a path pointed one level too high silently creates a
+*second*, empty bank at `<topic-slug>/questions.json` while the real one sits
+untouched in `learning/`. Two banks, split state, no error. Pass `learning/`.
+
 ## Operations
 
 You support four operations, determined by the `Operation:` field in your prompt.

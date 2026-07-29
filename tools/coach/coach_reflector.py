@@ -13,10 +13,12 @@ Zero external dependencies — Python 3.8+ stdlib only.
 import argparse
 import json
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
+
+# Same directory, so sys.path[0] already covers this when run as a script.
+from coach_metrics import parse_current_session
 
 # ---------------------------------------------------------------------------
 # Parsers
@@ -150,27 +152,6 @@ def parse_coach_insights(path: Path) -> List[Dict[str, Any]]:
         insights.append(current)
 
     return insights
-
-
-def parse_current_session(path: Path) -> int:
-    """Determine current session number from journal/index.md."""
-    index = path / "journal" / "index.md"
-    if not index.exists():
-        return 0
-
-    text = index.read_text(encoding="utf-8")
-    max_session = 0
-    for line in text.split("\n"):
-        if not line.strip().startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip().split("|")[1:-1]]
-        if not cells or cells[0] == "#" or "---" in cells[0]:
-            continue
-        m = re.match(r"(\d+)", cells[0])
-        if m:
-            max_session = max(max_session, int(m.group(1)))
-
-    return max_session
 
 
 # ---------------------------------------------------------------------------

@@ -9,13 +9,6 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name')
-
-# Only care about Agent tool calls
-if [ "$TOOL_NAME" != "Agent" ]; then
-  exit 0
-fi
-
 SUBAGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty')
 PROMPT=$(echo "$INPUT" | jq -r '.tool_input.prompt // empty')
 

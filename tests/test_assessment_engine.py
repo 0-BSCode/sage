@@ -2,8 +2,7 @@
 """Tests for the Assessment Engine.
 
 Covers: AdaptiveSelector, QuestionBank, KnowledgeMapReader, CLI end-to-end.
-Run: python3 -m pytest tools/assessment/test_assessment_engine.py -v
-  or: python3 -m unittest tools/assessment/test_assessment_engine.py -v
+Run: python3 -m pytest tests/test_assessment_engine.py -v
 """
 
 import json
@@ -14,8 +13,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Ensure the assessment engine module is importable
-sys.path.insert(0, str(Path(__file__).parent))
 from assessment_engine import (
     AdaptiveSelector,
     KnowledgeMapReader,
@@ -27,7 +24,7 @@ from assessment_engine import (
     QUESTION_TYPES,
 )
 
-ENGINE_PATH = str(Path(__file__).parent / "assessment_engine.py")
+ENGINE_PATH = str(Path(__file__).resolve().parent.parent / "tools" / "assessment" / "assessment_engine.py")
 
 
 # ---------------------------------------------------------------------------
@@ -253,37 +250,6 @@ class TestQuestionBank(unittest.TestCase):
         QuestionBank.add_question(bank, "b", 2, "conceptual", "Q2?", "A2")
         self.assertEqual(QuestionBank.next_id(bank), "q-3")
 
-    def test_calibrate_from_results(self):
-        bank = QuestionBank.create("test", {}, "2026-02-12")
-        # Add questions at different difficulties
-        QuestionBank.add_question(bank, "easy", 1, "free_recall", "Q1?", "A1")
-        QuestionBank.add_question(bank, "hard", 4, "analysis", "Q2?", "A2")
-        # Easy one: correct. Hard one: incorrect.
-        QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
-        QuestionBank.record_result(bank, "q-2", 0, today="2026-02-12")
-        level = QuestionBank.calibrate(bank)
-        # Easy correct (d=1, weight=1, contributes 1*1=1), hard incorrect (d=4, weight=4, contributes 0)
-        # total_weighted=1, total_weight=1+16=17... wait, let me re-check the algorithm
-        # weight = difficulty, if correct: total_weighted += difficulty * weight = d^2
-        # q-1: d=1, correct => weighted += 1*1=1, weight += 1
-        # q-2: d=4, incorrect => weighted += 0, weight += 4
-        # level = 1/5 = 0.2 -> clamped to 1.0
-        self.assertEqual(level, 1.0)
-
-    def test_calibrate_all_correct_high_difficulty(self):
-        bank = QuestionBank.create("test", {}, "2026-02-12")
-        QuestionBank.add_question(bank, "hard", 5, "transfer", "Q?", "A")
-        QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
-        level = QuestionBank.calibrate(bank)
-        # d=5, correct => weighted += 25, weight += 5 => 25/5 = 5.0
-        self.assertEqual(level, 5.0)
-
-    def test_calibrate_no_results(self):
-        bank = QuestionBank.create("test", {}, "2026-02-12")
-        QuestionBank.add_question(bank, "foo", 2, "conceptual", "Q?", "A")
-        level = QuestionBank.calibrate(bank)
-        self.assertEqual(level, 3.0)  # default when no results
-
 
 # ---------------------------------------------------------------------------
 # TestAdaptiveSelector
@@ -301,7 +267,7 @@ class TestAdaptiveSelector(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             bank, km, _ = self._make_bank_and_km(tmpdir)
             # useRef has never been assessed and has no questions
-            priority = AdaptiveSelector.concept_priority("useRef", bank, "not started", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("useRef", bank, "2026-02-12")
             # recency=5.0 (never assessed) + weakness=0.0 (no questions) + coverage=2.0 (< 3 questions)
             self.assertAlmostEqual(priority, 7.0, places=1)
 
@@ -316,7 +282,7 @@ class TestAdaptiveSelector(unittest.TestCase):
                 "last_assessed": "2026-02-12",
                 "assessment_count": 3,
             }
-            priority = AdaptiveSelector.concept_priority("useState", bank, "solid", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("useState", bank, "2026-02-12")
             # recency=0.0 (assessed today) + weakness=0.0 (no asked questions) + coverage=0.0 (>=5)
             self.assertAlmostEqual(priority, 0.0, places=1)
 
@@ -328,7 +294,7 @@ class TestAdaptiveSelector(unittest.TestCase):
             QuestionBank.record_result(bank, "q-1", 0, today="2026-02-12")
             QuestionBank.record_result(bank, "q-1", 0, today="2026-02-12")
             # success_rate = 0.0 < 0.5 => weakness_weight = 3.0
-            priority = AdaptiveSelector.concept_priority("closures", bank, "developing", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("closures", bank, "2026-02-12")
             # recency from coverage last_assessed = today => 0/7=0.0
             # weakness = 3.0 (avg success 0.0 < 0.5)
             # coverage: total_questions for closures = 1 => coverage_weight = 2.0
@@ -342,7 +308,7 @@ class TestAdaptiveSelector(unittest.TestCase):
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
-            priority = AdaptiveSelector.concept_priority("useState", bank, "solid", "2026-02-12")
+            priority = AdaptiveSelector.concept_priority("useState", bank, "2026-02-12")
             # success_rate = 1.0 >= 0.7 => weakness = 0.0
             # Check weakness doesn't contribute
             # recency depends on coverage last_assessed
@@ -353,12 +319,12 @@ class TestAdaptiveSelector(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             bank, km, _ = self._make_bank_and_km(tmpdir)
             # useEffect has 0 questions => coverage_weight = 2.0
-            p1 = AdaptiveSelector.concept_priority("useEffect", bank, "introduced", "2026-02-12")
+            p1 = AdaptiveSelector.concept_priority("useEffect", bank, "2026-02-12")
             # Add 3 questions
             for i in range(3):
                 QuestionBank.add_question(bank, "useEffect", 1, "free_recall",
                                           f"Q{i}?", f"A{i}", today="2026-02-12")
-            p2 = AdaptiveSelector.concept_priority("useEffect", bank, "introduced", "2026-02-12")
+            p2 = AdaptiveSelector.concept_priority("useEffect", bank, "2026-02-12")
             # After 3 questions, coverage_weight drops from 2.0 to 1.0
             self.assertGreater(p1, p2)
 
@@ -429,7 +395,7 @@ class TestAdaptiveSelector(unittest.TestCase):
                                       "Unasked question", "A2", today="2026-02-10")
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-11")
 
-            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual", "2026-02-12")
+            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual")
             self.assertIsNotNone(result)
             self.assertEqual(result["question_id"], "q-2")  # prefer unasked
 
@@ -444,7 +410,7 @@ class TestAdaptiveSelector(unittest.TestCase):
             QuestionBank.record_result(bank, "q-1", 1, today="2026-02-01")
             QuestionBank.record_result(bank, "q-2", 1, today="2026-02-11")
 
-            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual", "2026-02-12")
+            result = AdaptiveSelector.select_from_bank(bank, "closures", 2, "conceptual")
             self.assertIsNotNone(result)
             self.assertEqual(result["question_id"], "q-1")  # older last_asked
 
@@ -557,22 +523,6 @@ class TestAdaptiveSelector(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestFormatters(unittest.TestCase):
-
-    def test_coverage_format(self):
-        bank = QuestionBank.create("test", {"foo": {"status": "introduced"}}, "2026-02-12")
-        QuestionBank.add_question(bank, "foo", 2, "conceptual", "Q?", "A", today="2026-02-12")
-        output = MarkdownFormatter.coverage(bank)
-        self.assertIn("Assessment Coverage", output)
-        self.assertIn("foo", output)
-        self.assertIn("1", output)  # 1 question
-
-    def test_stats_format(self):
-        bank = QuestionBank.create("test", {}, "2026-02-12")
-        QuestionBank.add_question(bank, "foo", 2, "conceptual", "Q?", "A", today="2026-02-12")
-        QuestionBank.record_result(bank, "q-1", 1, today="2026-02-12")
-        output = MarkdownFormatter.stats(bank)
-        self.assertIn("Assessment Statistics", output)
-        self.assertIn("1", output)
 
     def test_select_list_empty(self):
         output = MarkdownFormatter.select_list([])
@@ -759,59 +709,8 @@ class TestCLIEndToEnd(unittest.TestCase):
             self.assertEqual(data["score"], 0)
             self.assertEqual(data["quality"], "wrong")
 
-    def test_coverage_report_format(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            topic_dir = make_topic_dir(tmpdir)
-            self._run_cmd(["init", str(topic_dir)])
-            self._run_cmd([
-                "add", str(topic_dir),
-                "--concept", "closures", "--difficulty", "2",
-                "--type", "conceptual", "--text", "Q?", "--answer", "A",
-            ])
-            result = self._run_cmd(["coverage", str(topic_dir)])
-            self.assertEqual(result.returncode, 0)
-            self.assertIn("Coverage", result.stdout)
-            self.assertIn("closures", result.stdout)
-
-    def test_stats_report_format(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            topic_dir = make_topic_dir(tmpdir)
-            self._run_cmd(["init", str(topic_dir)])
-            result = self._run_cmd(["stats", str(topic_dir)])
-            self.assertEqual(result.returncode, 0)
-            self.assertIn("Statistics", result.stdout)
-
-    def test_calibrate_recomputes_level(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            topic_dir = make_topic_dir(tmpdir)
-            self._run_cmd(["init", str(topic_dir)])
-            self._run_cmd([
-                "add", str(topic_dir),
-                "--concept", "closures", "--difficulty", "3",
-                "--type", "application", "--text", "Q?", "--answer", "A",
-            ])
-            self._run_cmd(["record", str(topic_dir), "q-1", "1", "--quality", "strong"])
-            result = self._run_cmd(["calibrate", str(topic_dir)])
-            self.assertEqual(result.returncode, 0)
-            self.assertIn("level", result.stdout)
-
-    def test_calibrate_json_output(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            topic_dir = make_topic_dir(tmpdir)
-            self._run_cmd(["init", str(topic_dir)])
-            self._run_cmd([
-                "add", str(topic_dir),
-                "--concept", "closures", "--difficulty", "3",
-                "--type", "application", "--text", "Q?", "--answer", "A",
-            ])
-            self._run_cmd(["record", str(topic_dir), "q-1", "1"])
-            result = self._run_cmd(["calibrate", str(topic_dir), "--json"])
-            self.assertEqual(result.returncode, 0)
-            data = json.loads(result.stdout)
-            self.assertIn("level", data)
-
     def test_full_workflow_init_add_select_record(self):
-        """End-to-end: init -> add -> select -> record -> stats."""
+        """End-to-end: init -> add -> select -> record."""
         with tempfile.TemporaryDirectory() as tmpdir:
             topic_dir = make_topic_dir(tmpdir)
 
@@ -848,18 +747,13 @@ class TestCLIEndToEnd(unittest.TestCase):
                                "--quality", "wrong", "--session", "1"])
             self.assertEqual(r.returncode, 0)
 
-            # Stats
-            r = self._run_cmd(["stats", str(topic_dir), "--json"])
-            self.assertEqual(r.returncode, 0)
-            stats = json.loads(r.stdout)
-            self.assertEqual(stats["total"], 3)
-            self.assertEqual(stats["total_assessments"], 2)
-
-            # Coverage
-            r = self._run_cmd(["coverage", str(topic_dir), "--json"])
-            self.assertEqual(r.returncode, 0)
-            cov = json.loads(r.stdout)
-            self.assertIn("closures", cov["coverage"])
+            # Bank state reflects every step
+            bank = json.loads((topic_dir / "questions.json").read_text())
+            self.assertEqual(len(bank["questions"]), 3)
+            self.assertEqual(
+                sum(q["times_asked"] for q in bank["questions"].values()), 2
+            )
+            self.assertIn("closures", bank["coverage"])
 
     def test_record_invalid_question_id(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -894,17 +788,6 @@ class TestCLIEndToEnd(unittest.TestCase):
             r = self._run_cmd(["record", str(topic_dir), "q-1", "1", "--json"])
             json.loads(r.stdout)
 
-            # coverage --json
-            r = self._run_cmd(["coverage", str(topic_dir), "--json"])
-            json.loads(r.stdout)
-
-            # stats --json
-            r = self._run_cmd(["stats", str(topic_dir), "--json"])
-            json.loads(r.stdout)
-
-            # calibrate --json
-            r = self._run_cmd(["calibrate", str(topic_dir), "--json"])
-            json.loads(r.stdout)
 
 
 if __name__ == "__main__":
