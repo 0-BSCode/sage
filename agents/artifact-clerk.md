@@ -47,7 +47,7 @@ The `Project:` field is optional. When provided, use it as the canonical project
    - `coach-insights.md` — coach behavioral rules. Read this file. If it does not exist, note "None — file not present" in the Coach Insights section.
    - `metrics/dashboard.md` (coach effectiveness metrics, if present)
    - `docs/references/index.md` (reference document index, if it exists)
-   - `docs/demos/index.html` (demo index, if it exists)
+   - `docs/demos/index.md` (demo index, if it exists)
    - `../capstone/capstone.md` (capstone project spec, if it exists — lives in `capstone/` sibling to `learning/`)
    - `cross-refs/INDEX.md` (cross-project topic registry index — look for the `cross-refs/` directory by walking up from the learning path to the repo root. Search up to 4 parent directories from the specified path.)
    - From INDEX.md, find the current project's row and load `cross-refs/<current-project>.md` plus each file listed in the "Overlaps With" column. From overlapping project files, extract only rows where the current project appears in "Also Covered In."

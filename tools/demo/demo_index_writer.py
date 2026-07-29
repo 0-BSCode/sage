@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Deterministic index writer for docs/demos/index.html.
+"""Deterministic index writer for docs/demos/index.md.
 
-Manages the demo index file in a guaranteed canonical HTML format.
-The demo-generator agent produces demo content; this script enforces
-index formatting, deduplication, and validation.
+Manages the demo index as a markdown table. The demo-generator agent produces
+demo content; this script enforces index formatting, deduplication, and
+validation.
 
 Commands:
     append <path> --json '<json>'   Append a new demo entry from JSON
@@ -29,70 +29,19 @@ import argparse
 import json
 import re
 import sys
-from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-# ---------------------------------------------------------------------------
-# Canonical index template
-# ---------------------------------------------------------------------------
+INDEX_HEADER = """\
+# Interactive Demos
 
-INDEX_TEMPLATE = """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Demos</title>
-    <style>
-        body {{ font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th, td {{ padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background: #f5f5f5; }}
-        a {{ color: #0066cc; }}
-    </style>
-</head>
-<body>
-    <h1>Interactive Demos</h1>
-    <p>Targeted demos for persistent weak spots. Each demo corrects a specific wrong mental model.</p>
-    <table>
-        <thead>
-            <tr>
-                <th>Weak Spot</th>
-                <th>Demo</th>
-                <th>Related Reference</th>
-                <th>Created</th>
-            </tr>
-        </thead>
-        <tbody>
-{rows}
-        </tbody>
-    </table>
-</body>
-</html>
+Targeted demos for persistent weak spots. Each demo corrects a specific wrong mental model.
+
+| Weak Spot | Demo | Related Reference | Created |
+|-----------|------|-------------------|---------|
 """
 
-ROW_TEMPLATE = (
-    '            <tr>\n'
-    '                <td>{weak_spot_id}: {weak_spot_description}</td>\n'
-    '                <td><a href="{demo_filename}">{demo_title}</a></td>\n'
-    '                <td>{ref_cell}</td>\n'
-    '                <td>{created_date}</td>\n'
-    '            </tr>'
-)
-
-# Regex to extract existing rows from the tbody
-ROW_RE = re.compile(
-    r"<tr>\s*"
-    r"<td>(WS-\d+):\s*(.*?)</td>\s*"
-    r"<td><a\s+href=\"(.*?)\">(.*?)</a></td>\s*"
-    r"<td>(.*?)</td>\s*"
-    r"<td>(\d{4}-\d{2}-\d{2})</td>\s*"
-    r"</tr>",
-    re.DOTALL,
-)
-
-REF_LINK_RE = re.compile(r'<a\s+href="(.*?)">(.*?)</a>')
+LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
 
 NO_REF_TEXT = "No reference doc yet"
 
@@ -101,22 +50,9 @@ NO_REF_TEXT = "No reference doc yet"
 # Core functions
 # ---------------------------------------------------------------------------
 
-def parse_existing_rows(html: str) -> List[Dict[str, str]]:
-    """Parse existing demo entries from the index HTML."""
-    rows = []
-    for m in ROW_RE.finditer(html):
-        ref_cell_raw = m.group(5).strip()
-        ref_match = REF_LINK_RE.search(ref_cell_raw)
-
-        rows.append({
-            "weak_spot_id": m.group(1),
-            "weak_spot_description": m.group(2).strip(),
-            "demo_filename": m.group(3),
-            "demo_title": m.group(4).strip(),
-            "related_reference": ref_match.group(1) if ref_match else "",
-            "created_date": m.group(6),
-        })
-    return rows
+def cells(row: str) -> List[str]:
+    """Split a markdown table row into its cells."""
+    return [c.strip() for c in row.strip().strip("|").split("|")]
 
 
 def format_ref_cell(related_reference: str) -> str:
@@ -124,32 +60,41 @@ def format_ref_cell(related_reference: str) -> str:
     if not related_reference or related_reference == "—":
         return NO_REF_TEXT
     # Extract concept name from slug: ref-hypothesis-testing.md -> Hypothesis Testing
-    name = related_reference
-    name = re.sub(r"^ref-", "", name)
+    name = re.sub(r"^ref-", "", related_reference)
     name = re.sub(r"\.md$", "", name)
     name = name.replace("-", " ").title()
-    return f'<a href="../references/{related_reference}">{name}</a>'
+    return f"[{name}](../references/{related_reference})"
 
 
-def format_row(entry: Dict[str, str]) -> str:
-    """Format a single table row."""
-    return ROW_TEMPLATE.format(
-        weak_spot_id=entry["weak_spot_id"],
-        weak_spot_description=entry["weak_spot_description"],
-        demo_filename=entry["demo_filename"],
-        demo_title=entry["demo_title"],
-        ref_cell=format_ref_cell(entry.get("related_reference", "")),
-        created_date=entry["created_date"],
+def format_row(entry: Dict[str, Any]) -> str:
+    """Format a single markdown table row."""
+    return (
+        f"| {entry['weak_spot_id']}: {entry['weak_spot_description']} "
+        f"| [{entry['demo_title']}]({entry['demo_filename']}) "
+        f"| {format_ref_cell(entry.get('related_reference', ''))} "
+        f"| {entry['created_date']} |"
     )
 
 
-def build_index(rows: List[Dict[str, str]]) -> str:
-    """Build the complete index.html from a list of row entries."""
-    if not rows:
-        row_html = ""
-    else:
-        row_html = "\n".join(format_row(r) for r in rows) + "\n"
-    return INDEX_TEMPLATE.format(rows=row_html)
+def read_rows(index_path: Path) -> List[str]:
+    """Read existing table rows, excluding the header and its separator.
+
+    Every data row is kept verbatim, including hand-written ones this script
+    did not produce. Only rows carrying a WS id are ever rewritten; anything
+    else rides along untouched rather than being dropped on the next append.
+    """
+    if not index_path.exists():
+        return []
+    return [
+        line for line in index_path.read_text(encoding="utf-8").splitlines()
+        if line.startswith("|")
+        and not line.startswith("| Weak Spot")
+        and not set(line) <= set("|- ")
+    ]
+
+
+def write_index(index_path: Path, rows: List[str]) -> None:
+    index_path.write_text(INDEX_HEADER + "".join(r + "\n" for r in rows), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +103,6 @@ def build_index(rows: List[Dict[str, str]]) -> str:
 
 def cmd_append(demos_dir: Path, entry: Dict[str, Any]) -> None:
     """Append a new demo entry to the index."""
-    # Validate required fields
     required = ["weak_spot_id", "weak_spot_description", "demo_title",
                 "demo_filename", "created_date"]
     missing = [f for f in required if not entry.get(f)]
@@ -166,97 +110,69 @@ def cmd_append(demos_dir: Path, entry: Dict[str, Any]) -> None:
         print(f"Error: missing required fields: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    # Validate weak_spot_id format
-    if not re.match(r"^WS-\d+$", entry["weak_spot_id"]):
-        print(f"Error: weak_spot_id must match WS-<number>, got: {entry['weak_spot_id']}",
+    ws_id = entry["weak_spot_id"]
+    if not re.match(r"^WS-\d+$", ws_id):
+        print(f"Error: weak_spot_id must match WS-<number>, got: {ws_id}",
               file=sys.stderr)
         sys.exit(1)
 
-    # Validate demo file exists
-    demo_path = demos_dir / entry["demo_filename"]
-    if not demo_path.exists():
-        print(f"Warning: demo file not found: {demo_path}", file=sys.stderr)
+    if not (demos_dir / entry["demo_filename"]).exists():
+        print(f"Warning: demo file not found: {demos_dir / entry['demo_filename']}",
+              file=sys.stderr)
 
-    index_path = demos_dir / "index.html"
+    index_path = demos_dir / "index.md"
+    rows = read_rows(index_path)
 
-    # Parse existing or start fresh
-    if index_path.exists():
-        html = index_path.read_text(encoding="utf-8")
-        rows = parse_existing_rows(html)
-    else:
-        rows = []
+    # Same weak spot replaces its previous entry
+    kept = [r for r in rows if not r.startswith(f"| {ws_id}:")]
+    action = "Updated" if len(kept) < len(rows) else "Appended"
 
-    # Check for duplicate WS-number — update if exists
-    existing_idx = None
-    for i, row in enumerate(rows):
-        if row["weak_spot_id"] == entry["weak_spot_id"]:
-            existing_idx = i
-            break
-
-    clean_entry = {
-        "weak_spot_id": entry["weak_spot_id"],
-        "weak_spot_description": entry["weak_spot_description"],
-        "demo_title": entry["demo_title"],
-        "demo_filename": entry["demo_filename"],
-        "related_reference": entry.get("related_reference", ""),
-        "created_date": entry["created_date"],
-    }
-
-    if existing_idx is not None:
-        rows[existing_idx] = clean_entry
-        action = "Updated"
-    else:
-        rows.append(clean_entry)
-        action = "Appended"
-
-    # Sort by created date (chronological)
-    rows.sort(key=lambda r: r["created_date"])
-
-    # Write
-    index_path.write_text(build_index(rows), encoding="utf-8")
+    kept.append(format_row(entry))
+    kept.sort(key=lambda r: cells(r)[-1])  # chronological by Created (always last)
+    write_index(index_path, kept)
 
     print(f"{action} demo entry in {index_path}")
-    print(f"  Weak spot: {clean_entry['weak_spot_id']}: {clean_entry['weak_spot_description']}")
-    print(f"  Demo: {clean_entry['demo_filename']}")
-    print(f"  Total entries: {len(rows)}")
+    print(f"  Weak spot: {ws_id}: {entry['weak_spot_description']}")
+    print(f"  Demo: {entry['demo_filename']}")
+    print(f"  Total entries: {len(kept)}")
 
 
 def cmd_validate(demos_dir: Path) -> None:
     """Validate the demo index for issues."""
-    index_path = demos_dir / "index.html"
+    index_path = demos_dir / "index.md"
     if not index_path.exists():
         print(f"Error: {index_path} does not exist", file=sys.stderr)
         sys.exit(1)
 
-    html = index_path.read_text(encoding="utf-8")
-    rows = parse_existing_rows(html)
-    issues = []
-
+    rows = read_rows(index_path)
     if not rows:
         print(f"OK — index exists but has no entries: {index_path}")
         return
 
+    issues = []
     seen_ids = set()
     for row in rows:
-        # Check for duplicate WS-numbers
-        if row["weak_spot_id"] in seen_ids:
-            issues.append(f"Duplicate weak spot: {row['weak_spot_id']}")
-        seen_ids.add(row["weak_spot_id"])
+        c = cells(row)
+        ws_id = c[0].split(":")[0].strip()
+        if not re.match(r"^WS-\d+$", ws_id):
+            continue  # hand-written row — not this script's to check
 
-        # Check demo file exists
-        demo_path = demos_dir / row["demo_filename"]
-        if not demo_path.exists():
-            issues.append(f"Missing demo file: {row['demo_filename']} (for {row['weak_spot_id']})")
+        if ws_id in seen_ids:
+            issues.append(f"Duplicate weak spot: {ws_id}")
+        seen_ids.add(ws_id)
 
-        # Check date format
-        if not re.match(r"^\d{4}-\d{2}-\d{2}$", row["created_date"]):
-            issues.append(f"Invalid date format for {row['weak_spot_id']}: {row['created_date']}")
+        demo_link = LINK_RE.search(c[1])
+        if not demo_link:
+            issues.append(f"Malformed demo link for {ws_id}: {c[1]}")
+        elif not (demos_dir / demo_link.group(1)).exists():
+            issues.append(f"Missing demo file: {demo_link.group(1)} (for {ws_id})")
 
-        # Check reference file exists (if specified)
-        if row["related_reference"]:
-            ref_path = demos_dir.parent / "references" / row["related_reference"]
-            if not ref_path.exists():
-                issues.append(f"Missing reference file: {row['related_reference']} (for {row['weak_spot_id']})")
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", c[-1]):
+            issues.append(f"Invalid date format for {ws_id}: {c[-1]}")
+
+        ref_link = LINK_RE.search(c[2])
+        if ref_link and not (demos_dir / ref_link.group(1)).exists():
+            issues.append(f"Missing reference file: {ref_link.group(1)} (for {ws_id})")
 
     if not issues:
         print(f"OK — {len(rows)} entries, no issues found in {index_path}")
@@ -283,7 +199,7 @@ def _resolve_demos_dir(path_arg: str) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Deterministic index writer for docs/demos/index.html",
+        description="Deterministic index writer for docs/demos/index.md",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
