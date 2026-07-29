@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """Deterministic knowledge-map writer for knowledge-map.md.
 
-Handles Status Changelog appends, Status Legend normalization, and
-concepts table manipulation (add/update rows).
+Handles Status Changelog appends and concepts table manipulation
+(add/update rows).
 
 Commands:
     changelog-append <path> --stdin    Append rows to Status Changelog section
-    fix-legend <path>                  Normalize Status Legend to canonical format
-    ensure-sections <path>             Create missing Changelog section
-    validate <path>                    Check for format violations
     add-concept <path> --stdin         Add a new concept row to the concepts table
     update-status <path> --stdin       Update an existing concept's status
 
@@ -26,14 +23,6 @@ from typing import Any, Dict, List, Optional, Tuple
 # Canonical formats
 # ---------------------------------------------------------------------------
 
-CANONICAL_LEGEND = """## Status Legend
-- **Not started** — Concept on the plan, not yet introduced
-- **Introduced** — Concept presented, not yet retrieval-tested
-- **Developing** — Retrieval-tested but inconsistent recall
-- **Solid** — Reliable retrieval and application
-- **Mastered** — Automatic retrieval, can teach and handle edge cases
-- **Prior (from [project])** — Already solid/mastered in a sibling project"""
-
 CANONICAL_STATUSES = {"not started", "introduced", "developing", "solid", "mastered", "prior"}
 
 CHANGELOG_HEADER = "| Date | Concept | From | To | Session |"
@@ -43,13 +32,6 @@ INTRODUCED_RE = re.compile(r"^S\d+$|^prior$", re.IGNORECASE)
 
 # Section heading patterns
 CHANGELOG_HEADING_RE = re.compile(r"^##\s+Status\s+Changelog\s*$", re.IGNORECASE)
-LEGEND_HEADING_RE = re.compile(r"^##\s+Status\s+Legend\s*$", re.IGNORECASE)
-
-# Detect any legend-like content (bracket-style, bullet-style, etc.)
-LEGEND_CONTENT_RE = re.compile(
-    r"Status\s+legend|mastered.*solid.*developing|mastered.*solid.*shaky",
-    re.IGNORECASE,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -70,20 +52,6 @@ def _find_section(lines: List[str], heading_re: re.Pattern) -> Optional[Tuple[in
             return (start, i - 1)
     if start is not None:
         return (start, len(lines) - 1)
-    return None
-
-
-def _find_legend_section(lines: List[str]) -> Optional[Tuple[int, int]]:
-    """Find the Status Legend section, including non-canonical formats."""
-    # First try canonical heading
-    result = _find_section(lines, LEGEND_HEADING_RE)
-    if result:
-        return result
-
-    # Try to find inline legend (e.g., "Status legend: [mastered] [solid] ...")
-    for i, line in enumerate(lines):
-        if LEGEND_CONTENT_RE.search(line) and not line.strip().startswith("#"):
-            return (i, i)
     return None
 
 
@@ -192,115 +160,6 @@ def cmd_changelog_append(path: Path, entries: List[Dict[str, Any]]) -> None:
     print(f"Appended {len(new_rows)} changelog row(s) to {path}")
 
 
-def cmd_fix_legend(path: Path) -> None:
-    """Replace the Status Legend with the canonical version."""
-    if not path.exists():
-        print(f"Error: {path} does not exist", file=sys.stderr)
-        sys.exit(1)
-
-    text = path.read_text(encoding="utf-8")
-    lines = text.split("\n")
-
-    section = _find_legend_section(lines)
-    if section is None:
-        # No legend found — insert after the title line
-        insert_at = 0
-        for i, line in enumerate(lines):
-            if line.strip().startswith("# "):
-                insert_at = i + 1
-                break
-            if line.strip().startswith("**Last updated"):
-                insert_at = i + 1
-                break
-
-        # Skip blank lines after title/date
-        while insert_at < len(lines) and lines[insert_at].strip() == "":
-            insert_at += 1
-
-        legend_lines = CANONICAL_LEGEND.split("\n")
-        for i, ll in enumerate(legend_lines):
-            lines.insert(insert_at + i, ll)
-        lines.insert(insert_at + len(legend_lines), "")
-
-        path.write_text("\n".join(lines), encoding="utf-8")
-        print(f"Inserted canonical Status Legend in {path}")
-        return
-
-    start, end = section
-
-    # Check if already canonical
-    existing = "\n".join(lines[start:end + 1]).strip()
-    if existing == CANONICAL_LEGEND.strip():
-        print(f"Status Legend already canonical in {path}")
-        return
-
-    # Replace
-    legend_lines = CANONICAL_LEGEND.split("\n")
-    lines[start:end + 1] = legend_lines
-    path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Replaced Status Legend with canonical version in {path}")
-
-
-def cmd_ensure_sections(path: Path) -> None:
-    """Create missing Changelog section."""
-    if not path.exists():
-        print(f"Error: {path} does not exist", file=sys.stderr)
-        sys.exit(1)
-
-    text = path.read_text(encoding="utf-8")
-    lines = text.split("\n")
-    added = []
-
-    if _find_section(lines, CHANGELOG_HEADING_RE) is None:
-        lines.append("")
-        lines.append("## Status Changelog")
-        lines.append("")
-        lines.append(CHANGELOG_HEADER)
-        lines.append(CHANGELOG_SEP)
-        added.append("Status Changelog")
-
-    if added:
-        path.write_text("\n".join(lines), encoding="utf-8")
-        print(f"Added sections to {path}: {', '.join(added)}")
-    else:
-        print(f"All sections already present in {path}")
-
-
-def cmd_validate(path: Path) -> None:
-    """Check knowledge-map.md for format violations."""
-    if not path.exists():
-        print(f"Error: {path} does not exist", file=sys.stderr)
-        sys.exit(1)
-
-    text = path.read_text(encoding="utf-8")
-    lines = text.split("\n")
-    issues: List[str] = []
-
-    # Check legend
-    legend = _find_legend_section(lines)
-    if legend is None:
-        issues.append("Status Legend: missing entirely")
-    else:
-        existing = "\n".join(lines[legend[0]:legend[1] + 1]).strip()
-        if existing != CANONICAL_LEGEND.strip():
-            issues.append("Status Legend: non-canonical format")
-
-    # Check changelog
-    changelog = _find_section(lines, CHANGELOG_HEADING_RE)
-    if changelog is None:
-        issues.append("Status Changelog: section missing")
-
-    if not issues:
-        print(f"OK — no format violations in {path}")
-        return
-
-    print(f"Found {len(issues)} issue(s) in {path}:\n")
-    for issue in issues:
-        print(f"  - {issue}")
-    print()
-    sys.exit(1)
-
-
 def cmd_add_concept(path: Path, entry: Dict[str, Any]) -> None:
     """Add a new concept row to the last concept table."""
     if not path.exists():
@@ -402,15 +261,6 @@ def main() -> None:
     p_cl.add_argument("--json", dest="json_str", help="JSON string")
     p_cl.add_argument("--stdin", action="store_true", help="Read JSON from stdin")
 
-    p_fl = subparsers.add_parser("fix-legend", help="Normalize Status Legend")
-    p_fl.add_argument("path", help="Path to knowledge-map.md or learning directory")
-
-    p_es = subparsers.add_parser("ensure-sections", help="Create missing sections")
-    p_es.add_argument("path", help="Path to knowledge-map.md or learning directory")
-
-    p_v = subparsers.add_parser("validate", help="Check for format violations")
-    p_v.add_argument("path", help="Path to knowledge-map.md or learning directory")
-
     p_ac = subparsers.add_parser("add-concept", help="Add a new concept row")
     p_ac.add_argument("path", help="Path to knowledge-map.md or learning directory")
     p_ac.add_argument("--json", dest="json_str", help="JSON string")
@@ -442,15 +292,6 @@ def main() -> None:
         if not isinstance(data, list):
             data = [data]
         cmd_changelog_append(path, data)
-
-    elif args.command == "fix-legend":
-        cmd_fix_legend(path)
-
-    elif args.command == "ensure-sections":
-        cmd_ensure_sections(path)
-
-    elif args.command == "validate":
-        cmd_validate(path)
 
     elif args.command in ("add-concept", "update-status"):
         if args.stdin:

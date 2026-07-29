@@ -366,32 +366,10 @@ class WeakSpotWriterTests(unittest.TestCase):
                 shutil.rmtree(tmp, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # Validate command
+    # History round-trip
     # ------------------------------------------------------------------
 
-    def test_validate_kind_ws_passes_on_clean_file(self) -> None:
-        run_writer(
-            "append", str(self.tmp), "--kind", "WS", "--stdin",
-            stdin=make_ws_entry("clean entry"),
-        )
-        result = run_writer("validate", str(self.tmp), "--kind", "WS")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("OK", result.stdout)
-
-    def test_validate_kind_ce_passes_on_clean_file(self) -> None:
-        run_writer(
-            "append", str(self.tmp), "--kind", "CE", "--stdin",
-            stdin=make_ce_entry("clean entry"),
-        )
-        result = run_writer("validate", str(self.tmp), "--kind", "CE")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("OK", result.stdout)
-
-    # ------------------------------------------------------------------
-    # Fix command preserves History
-    # ------------------------------------------------------------------
-
-    def test_fix_preserves_history(self) -> None:
+    def test_append_preserves_history(self) -> None:
         entry = json.dumps({
             "description": "Gap",
             "session": 3,
@@ -401,11 +379,10 @@ class WeakSpotWriterTests(unittest.TestCase):
             "status": "active",
             "history": "Confused X with Y",
         })
-        run_writer(
+        result = run_writer(
             "append", str(self.tmp), "--kind", "WS", "--stdin",
             stdin=entry,
         )
-        result = run_writer("fix", str(self.tmp), "--kind", "WS")
         self.assertEqual(result.returncode, 0, result.stderr)
         body = (self.tmp / "weak-spots.md").read_text()
         self.assertIn("### History", body)

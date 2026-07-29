@@ -7,7 +7,6 @@ The LLM produces content; this script enforces formatting.
 Commands:
     append <path> --json '<json>'   Append a new row from JSON
     append <path> --stdin           Read row JSON from stdin
-    validate <path>                 Check for format violations
 
 Canonical format (8-column):
     | # | Date | Type | Focus | Reviews | Avg Grade | Summary | File |
@@ -182,56 +181,6 @@ def cmd_append(path: Path, row_json: Dict[str, Any]) -> None:
     print(f"Appended session {session_num} to {path}")
 
 
-def cmd_validate(path: Path) -> None:
-    """Check journal/index.md for format violations."""
-    if not path.exists():
-        print(f"Error: {path} does not exist", file=sys.stderr)
-        sys.exit(1)
-
-    text = path.read_text(encoding="utf-8")
-    headers, rows, _, _ = _parse_table(text)
-    issues: List[str] = []
-
-    if headers is None:
-        issues.append("No markdown table found")
-    else:
-        # Check headers
-        canonical_map = _map_headers(headers)
-        mapped = {m for m in canonical_map if m}
-        if mapped != set(CANONICAL_HEADERS):
-            missing = set(CANONICAL_HEADERS) - mapped
-            extra = set(headers) - {h for h, m in zip(headers, canonical_map) if m}
-            if missing:
-                issues.append(f"Missing columns: {', '.join(sorted(missing))}")
-            if extra:
-                issues.append(f"Unrecognized columns: {', '.join(sorted(extra))}")
-
-        # Check row widths
-        expected_cols = len(headers)
-        for i, row in enumerate(rows):
-            if len(row) != expected_cols:
-                issues.append(f"Row {i + 1}: expected {expected_cols} columns, got {len(row)}")
-
-        # Check for duplicate session numbers
-        session_nums = [r[0].strip() if r else "" for r in rows]
-        seen = {}
-        for i, sn in enumerate(session_nums):
-            if sn in seen:
-                issues.append(f"Duplicate session number '{sn}' at rows {seen[sn] + 1} and {i + 1}")
-            else:
-                seen[sn] = i
-
-    if not issues:
-        print(f"OK — no format violations in {path}")
-        return
-
-    print(f"Found {len(issues)} issue(s) in {path}:\n")
-    for issue in issues:
-        print(f"  - {issue}")
-    print()
-    sys.exit(1)
-
-
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -256,9 +205,6 @@ def main() -> None:
     p_append.add_argument("--json", dest="json_str", help="Row JSON string")
     p_append.add_argument("--stdin", action="store_true", help="Read JSON from stdin")
 
-    p_validate = subparsers.add_parser("validate", help="Check for format violations")
-    p_validate.add_argument("path", help="Path to journal/index.md or learning directory")
-
     args = parser.parse_args()
     path = _resolve_path(args.path)
 
@@ -282,9 +228,6 @@ def main() -> None:
             sys.exit(1)
 
         cmd_append(path, data)
-
-    elif args.command == "validate":
-        cmd_validate(path)
 
 
 if __name__ == "__main__":

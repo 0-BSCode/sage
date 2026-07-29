@@ -9,8 +9,6 @@ Computes 4 core metrics from learning artifacts:
 
 Commands:
     snapshot <path>                  Compute metrics, write history + dashboard
-    trends <path>                   Analyze metric trends from history
-    compare <path1> <path2>         Compare metrics across two projects
 
 Zero external dependencies — Python 3.8+ stdlib only.
 """
@@ -533,122 +531,14 @@ def cmd_snapshot(path: Path) -> None:
     print(json.dumps(snapshot, indent=2))
 
 
-def cmd_trends(path: Path) -> None:
-    """Analyze metric trends from history.json."""
-    history_path = path / "metrics" / "history.json"
-    if not history_path.exists():
-        print(json.dumps({"message": "No metrics history found"}))
-        return
-
-    history = json.loads(history_path.read_text(encoding="utf-8"))
-    if len(history) < 2:
-        print(json.dumps({"message": "Insufficient history for trend analysis"}))
-        return
-
-    def trend_for(key: str) -> Dict[str, Any]:
-        values = [s["metrics"].get(key) for s in history if s["metrics"].get(key) is not None]
-        if len(values) < 2:
-            return {"direction": "insufficient_data"}
-
-        current = values[-1]
-        previous = values[-2]
-        n = len(values)
-        x = list(range(n))
-        x_mean = sum(x) / n
-        y_mean = sum(values) / n
-        num = sum((x[i] - x_mean) * (values[i] - y_mean) for i in range(n))
-        den = sum((x[i] - x_mean) ** 2 for i in range(n))
-        slope = round(num / den, 4) if den != 0 else 0.0
-
-        if abs(slope) < 0.01:
-            direction = "stable"
-        elif slope > 0:
-            direction = "improving" if key == "review_efficiency" else "degrading"
-        else:
-            direction = "degrading" if key == "review_efficiency" else "improving"
-
-        return {
-            "direction": direction,
-            "current": current,
-            "previous": previous,
-            "slope": slope,
-        }
-
-    result = {
-        "snapshots_analyzed": len(history),
-        "trends": {
-            "time_to_solid": trend_for("time_to_solid_avg"),
-            "review_efficiency": trend_for("review_efficiency"),
-            "regression_rate": trend_for("regression_rate"),
-            "mastery_velocity": trend_for("mastery_velocity_slope"),
-        },
-        "flags": [],
-    }
-
-    print(json.dumps(result, indent=2))
-
-
-def cmd_compare(path1: Path, path2: Path) -> None:
-    """Compare coach effectiveness across two projects."""
-    def project_metrics(path: Path) -> Dict[str, Any]:
-        introduced = parse_introduced_column(path)
-        statuses = parse_concept_statuses(path)
-        solid_sessions = parse_changelog_solid_sessions(path)
-        regressions = parse_changelog_regressions(path)
-        reviews = parse_review_history(path)
-
-        tts_avg, _ = compute_time_to_solid(introduced, solid_sessions)
-        review_eff, _ = compute_review_efficiency(reviews)
-        reg_rate, _ = compute_regression_rate(statuses, solid_sessions, regressions)
-
-        return {
-            "name": path.parent.name,
-            "time_to_solid_avg": tts_avg,
-            "review_efficiency": review_eff,
-            "regression_rate": reg_rate,
-        }
-
-    m1 = project_metrics(path1)
-    m2 = project_metrics(path2)
-
-    def better(key: str, lower_is_better: bool) -> Optional[str]:
-        v1, v2 = m1.get(key), m2.get(key)
-        if v1 is None or v2 is None:
-            return None
-        if v1 == v2:
-            return "tied"
-        if lower_is_better:
-            return m1["name"] if v1 < v2 else m2["name"]
-        return m1["name"] if v1 > v2 else m2["name"]
-
-    result = {
-        "project_1": m1,
-        "project_2": m2,
-        "comparison": {
-            "faster_mastery": better("time_to_solid_avg", lower_is_better=True),
-            "better_retention": better("review_efficiency", lower_is_better=False),
-            "fewer_regressions": better("regression_rate", lower_is_better=True),
-        },
-    }
-
-    print(json.dumps(result, indent=2))
-
-
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
-def _resolve_path(path_arg: str, require_kmap: bool = True) -> Path:
+def _resolve_path(path_arg: str) -> Path:
     p = Path(path_arg).expanduser()
     if p.name == "knowledge-map.md":
         p = p.parent
-    if require_kmap:
-        kmap = p / "knowledge-map.md"
-        if not kmap.exists():
-            basename = Path(p.parts[-1]) if len(p.parts) > 1 else p
-            alt_kmap = basename / "knowledge-map.md"
-            hint = f" Did you mean '{basename}'?" if alt_kmap.exists() else ""
-            sys.exit(f"Error: '{kmap}' not found.{hint} (cwd: {Path.cwd()})")
     return p
 
 
@@ -659,21 +549,10 @@ def main() -> None:
     p_snap = subparsers.add_parser("snapshot", help="Compute metrics snapshot")
     p_snap.add_argument("path", help="Path to learning directory")
 
-    p_trend = subparsers.add_parser("trends", help="Analyze metric trends")
-    p_trend.add_argument("path", help="Path to learning directory")
-
-    p_cmp = subparsers.add_parser("compare", help="Compare two projects")
-    p_cmp.add_argument("path1", help="Path to first learning directory")
-    p_cmp.add_argument("path2", help="Path to second learning directory")
-
     args = parser.parse_args()
 
     if args.command == "snapshot":
-        cmd_snapshot(_resolve_path(args.path, require_kmap=False))
-    elif args.command == "trends":
-        cmd_trends(_resolve_path(args.path, require_kmap=False))
-    elif args.command == "compare":
-        cmd_compare(_resolve_path(args.path1), _resolve_path(args.path2))
+        cmd_snapshot(_resolve_path(args.path))
 
 
 if __name__ == "__main__":

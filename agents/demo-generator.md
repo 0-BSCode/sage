@@ -174,6 +174,10 @@ Where `<json>` is:
 ```
 All fields except `related_reference` are required. If no related reference doc exists, omit the field or pass an empty string.
 
+If the index looks wrong — a demo file listed that no longer exists, or an entry
+that vanished — `demo_index_writer.py validate <path>/docs/demos/` reports the
+problems without modifying anything.
+
 ### Step 8: Return confirmation
 
 ```markdown

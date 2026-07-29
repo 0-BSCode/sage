@@ -2,8 +2,8 @@
 """Assessment Engine — Adaptive question bank management for Sage.
 
 Manages a per-topic question bank (questions.json), implements adaptive
-selection based on concept mastery and learner performance, records results,
-and tracks coverage.
+selection based on concept mastery and learner performance, and records
+results.
 
 Commands:
     init <path>                          Create questions.json from knowledge-map
@@ -11,9 +11,6 @@ Commands:
     add-batch <path>                     Add questions from stdin (JSON array)
     select <path> [--concept C] [--count N] [--min-mastery L]  Adaptive question selection
     record <path> <qid> <score> [--session N] [--quality Q] [--notes TEXT]
-    coverage <path>                      Per-concept coverage report
-    stats <path>                         Aggregate statistics
-    calibrate <path>                     Recompute learner calibration
 
 All commands output markdown by default, --json for machine-readable output.
 Zero external dependencies — Python 3.8+ stdlib only.
@@ -237,34 +234,6 @@ class QuestionBank:
         cal = bank["learner_calibration"]
         cal["total_questions_answered"] += 1
         bank["last_updated"] = today
-
-    @staticmethod
-    def calibrate(bank: Dict[str, Any]) -> float:
-        """Recompute learner calibration from all result history."""
-        total_weighted = 0.0
-        total_weight = 0.0
-        for q in bank["questions"].values():
-            if q["retired"] or q["times_asked"] == 0:
-                continue
-            difficulty = q["difficulty"]
-            for result in q["result_history"]:
-                weight = difficulty  # harder questions weigh more
-                if result["score"] > 0:
-                    total_weighted += difficulty * weight
-                total_weight += weight
-
-        if total_weight > 0:
-            level = round(total_weighted / total_weight, 2)
-            level = max(1.0, min(5.0, level))
-        else:
-            level = 3.0
-
-        bank["learner_calibration"]["estimated_level"] = level
-        bank["learner_calibration"]["level_history"].append({
-            "date": date.today().isoformat(),
-            "level": level,
-        })
-        return level
 
 
 # ---------------------------------------------------------------------------
@@ -509,68 +478,6 @@ class MarkdownFormatter:
         status = "correct" if score > 0 else "incorrect"
         return f"Recorded: **{qid}** — {status} ({quality})"
 
-    @staticmethod
-    def coverage(bank: Dict[str, Any]) -> str:
-        cov = bank.get("coverage", {})
-        if not cov:
-            return "No coverage data. Run `init` first."
-        lines = ["## Assessment Coverage", ""]
-        lines.append("| Concept | Questions | By Difficulty | Last Assessed | Assessments |")
-        lines.append("|---------|-----------|---------------|---------------|-------------|")
-        for concept, data in sorted(cov.items()):
-            total = data.get("total_questions", 0)
-            by_diff = data.get("questions_by_difficulty", {})
-            diff_str = ", ".join(f"D{k}:{v}" for k, v in sorted(by_diff.items()))
-            last = data.get("last_assessed") or "never"
-            count = data.get("assessment_count", 0)
-            lines.append(f"| {concept} | {total} | {diff_str} | {last} | {count} |")
-
-        # Summary
-        total_q = sum(d.get("total_questions", 0) for d in cov.values())
-        never_assessed = sum(1 for d in cov.values() if not d.get("last_assessed"))
-        lines.append("")
-        lines.append(f"**Total:** {total_q} questions across {len(cov)} concepts. {never_assessed} concepts never assessed.")
-        return "\n".join(lines)
-
-    @staticmethod
-    def stats(bank: Dict[str, Any]) -> str:
-        questions = bank.get("questions", {})
-        active = {k: v for k, v in questions.items() if not v.get("retired")}
-        retired = len(questions) - len(active)
-        cal = bank.get("learner_calibration", {})
-
-        by_diff: Dict[int, int] = {}
-        by_type: Dict[str, int] = {}
-        total_asked = 0
-        total_correct = 0
-        for q in active.values():
-            d = q.get("difficulty", 0)
-            by_diff[d] = by_diff.get(d, 0) + 1
-            t = q.get("question_type", "unknown")
-            by_type[t] = by_type.get(t, 0) + 1
-            total_asked += q.get("times_asked", 0)
-            total_correct += q.get("times_correct", 0)
-
-        overall_rate = round(total_correct / total_asked, 2) if total_asked > 0 else 0.0
-
-        lines = [
-            f"## Assessment Statistics: {bank.get('topic', 'unknown')}",
-            "",
-            f"- **Total questions:** {len(questions)} ({len(active)} active, {retired} retired)",
-            f"- **By difficulty:** {', '.join(f'D{k}: {v}' for k, v in sorted(by_diff.items()))}",
-            f"- **By type:** {', '.join(f'{k}: {v}' for k, v in sorted(by_type.items()))}",
-            f"- **Total assessments:** {total_asked}",
-            f"- **Overall success rate:** {overall_rate}",
-            f"- **Learner level:** {cal.get('estimated_level', '?')}",
-            f"- **Created:** {bank.get('created', '?')}",
-            f"- **Last updated:** {bank.get('last_updated', '?')}",
-        ]
-        return "\n".join(lines)
-
-    @staticmethod
-    def calibrate_result(level: float) -> str:
-        return f"Learner calibration recomputed: **level {level:.2f}**"
-
 
 class JsonFormatter:
     @staticmethod
@@ -714,54 +621,6 @@ def cmd_record(args: argparse.Namespace) -> str:
     return MarkdownFormatter.record_result(qid, score, quality)
 
 
-def cmd_coverage(args: argparse.Namespace) -> str:
-    path = _resolve_path(args.path)
-    bp = QuestionBank.bank_path(path)
-    if not bp.exists():
-        return f"Error: {bp} not found. Run `init` first."
-
-    bank = QuestionBank.load(bp)
-    if args.json:
-        return JsonFormatter.output({"action": "coverage", "coverage": bank.get("coverage", {})})
-    return MarkdownFormatter.coverage(bank)
-
-
-def cmd_stats(args: argparse.Namespace) -> str:
-    path = _resolve_path(args.path)
-    bp = QuestionBank.bank_path(path)
-    if not bp.exists():
-        return f"Error: {bp} not found. Run `init` first."
-
-    bank = QuestionBank.load(bp)
-    if args.json:
-        questions = bank["questions"]
-        active = {k: v for k, v in questions.items() if not v.get("retired")}
-        return JsonFormatter.output({
-            "action": "stats",
-            "total": len(questions),
-            "active": len(active),
-            "retired": len(questions) - len(active),
-            "total_assessments": sum(q.get("times_asked", 0) for q in active.values()),
-            "learner_level": bank.get("learner_calibration", {}).get("estimated_level"),
-        })
-    return MarkdownFormatter.stats(bank)
-
-
-def cmd_calibrate(args: argparse.Namespace) -> str:
-    path = _resolve_path(args.path)
-    bp = QuestionBank.bank_path(path)
-    if not bp.exists():
-        return f"Error: {bp} not found. Run `init` first."
-
-    bank = QuestionBank.load(bp)
-    level = QuestionBank.calibrate(bank)
-    QuestionBank.save(bp, bank)
-
-    if args.json:
-        return JsonFormatter.output({"action": "calibrate", "level": level})
-    return MarkdownFormatter.calibrate_result(level)
-
-
 # ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
@@ -815,21 +674,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--notes", default="")
     p.add_argument("--json", action="store_true")
 
-    # coverage
-    p = subparsers.add_parser("coverage", help="Coverage report")
-    p.add_argument("path")
-    p.add_argument("--json", action="store_true")
-
-    # stats
-    p = subparsers.add_parser("stats", help="Aggregate statistics")
-    p.add_argument("path")
-    p.add_argument("--json", action="store_true")
-
-    # calibrate
-    p = subparsers.add_parser("calibrate", help="Recompute learner calibration")
-    p.add_argument("path")
-    p.add_argument("--json", action="store_true")
-
     return parser
 
 
@@ -839,9 +683,6 @@ COMMANDS = {
     "add-batch": cmd_add_batch,
     "select": cmd_select,
     "record": cmd_record,
-    "coverage": cmd_coverage,
-    "stats": cmd_stats,
-    "calibrate": cmd_calibrate,
 }
 
 

@@ -31,27 +31,6 @@ WELL_FORMATTED_FILE = """\
 | 2 | 2026-06-02 | review | Closures | 3 | 3.67 | Review session | session-02.md |
 """
 
-# A 5-column file missing Reviews, Avg Grade, Summary — validate must reject it
-FEWER_COLUMNS_FILE = """\
-# Session Index
-
-| # | Date | Type | Focus | File |
-|---|---|---|---|---|
-| 1 | 2026-06-01 | learn | React Hooks | session-01.md |
-| 2 | 2026-06-02 | review | Closures | session-02.md |
-"""
-
-# A malformed file with wrong column count in a row
-MALFORMED_FILE = """\
-# Session Index
-
-| # | Date | Type | Focus | Reviews | Avg Grade | Summary | File |
-|---|---|---|---|---|---|---|---|
-| 1 | 2026-06-01 | learn | React Hooks | 5 | 4.20 | First session | session-01.md |
-| 2 | 2026-06-02 | review |
-"""
-
-
 def _run(args, stdin_data=None):
     """Run the journal_writer CLI and return the CompletedProcess."""
     cmd = ["python3", TOOL_PATH] + args
@@ -232,56 +211,6 @@ class TestAppendOptionalColumns(unittest.TestCase):
         self.assertIn("session-3b.md", content)
 
 
-class TestValidatePassesOnWellFormatted(unittest.TestCase):
-    """validate — passes on well-formatted file."""
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.index_path = os.path.join(self.tmpdir, "index.md")
-        Path(self.index_path).write_text(WELL_FORMATTED_FILE)
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
-
-    def test_returns_zero_on_valid_file(self):
-        result = _run(["validate", self.index_path])
-
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("OK", result.stdout)
-        self.assertIn("no format violations", result.stdout)
-
-
-class TestValidateReportsViolations(unittest.TestCase):
-    """validate — reports violations on malformed file."""
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.index_path = os.path.join(self.tmpdir, "index.md")
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
-
-    def test_reports_column_count_mismatch(self):
-        Path(self.index_path).write_text(MALFORMED_FILE)
-        result = _run(["validate", self.index_path])
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("issue", result.stdout.lower())
-
-    def test_reports_missing_columns(self):
-        Path(self.index_path).write_text(FEWER_COLUMNS_FILE)
-        result = _run(["validate", self.index_path])
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Missing columns", result.stdout)
-
-    def test_missing_file_exits_nonzero(self):
-        result = _run(["validate", os.path.join(self.tmpdir, "nonexistent.md")])
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("does not exist", result.stderr)
-
-
 class TestErrorCases(unittest.TestCase):
     """Error cases: invalid JSON, missing file, missing args."""
 
@@ -311,13 +240,6 @@ class TestErrorCases(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--json", result.stderr)
-
-    def test_validate_missing_file_exits_nonzero(self):
-        path = os.path.join(self.tmpdir, "nonexistent.md")
-        result = _run(["validate", path])
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("does not exist", result.stderr)
 
     def test_no_command_exits_nonzero(self):
         result = _run([])
