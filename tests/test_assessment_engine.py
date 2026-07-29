@@ -2,8 +2,7 @@
 """Tests for the Assessment Engine.
 
 Covers: AdaptiveSelector, QuestionBank, KnowledgeMapReader, CLI end-to-end.
-Run: python3 -m pytest tools/assessment/test_assessment_engine.py -v
-  or: python3 -m unittest tools/assessment/test_assessment_engine.py -v
+Run: python3 -m pytest tests/test_assessment_engine.py -v
 """
 
 import json
@@ -14,8 +13,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Ensure the assessment engine module is importable
-sys.path.insert(0, str(Path(__file__).parent))
 from assessment_engine import (
     AdaptiveSelector,
     KnowledgeMapReader,
@@ -27,7 +24,7 @@ from assessment_engine import (
     QUESTION_TYPES,
 )
 
-ENGINE_PATH = str(Path(__file__).parent / "assessment_engine.py")
+ENGINE_PATH = str(Path(__file__).resolve().parent.parent / "tools" / "assessment" / "assessment_engine.py")
 
 
 # ---------------------------------------------------------------------------
