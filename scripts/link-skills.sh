@@ -6,7 +6,7 @@
 #
 # Each link points at this repo, so `git pull` keeps every Host current.
 # Pointing all Hosts at one tree also removes the shared-/tmp-slot ambiguity
-# described in KNOWN-ISSUES.md, because there is only one plugin root to write.
+# described in docs/KNOWN-ISSUES.md, because there is only one plugin root to write.
 #
 # Re-run after adding, removing, or renaming a skill.
 #

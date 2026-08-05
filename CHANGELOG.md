@@ -74,7 +74,7 @@ Design and decisions: ADRs 0006–0008.
 - `verification-gate`'s `audit` operation is documented as **not reachable** from the
   current grammar — nothing calls it, and adding a verb is an ADR 0002 decision.
 - Known issue, accepted: `/tmp/.sage-plugin-root` is one global slot shared by every
-  Host. See `KNOWN-ISSUES.md` for the escape hatch.
+  Host. See `docs/KNOWN-ISSUES.md` for the escape hatch.
 
 ## [1.1.0] - 2026-07-29
 

@@ -138,7 +138,7 @@ class TestHostNeutralProse(unittest.TestCase):
 
     def test_bootstrap_line_prefers_an_exported_root(self):
         # The bare `SAGE_ROOT=$(cat ...)` form has no escape hatch for the
-        # shared-/tmp-slot clobber. See KNOWN-ISSUES.md.
+        # shared-/tmp-slot clobber. See docs/KNOWN-ISSUES.md.
         for path in self._prose_files():
             text = path.read_text(encoding="utf-8")
             self.assertNotIn(
