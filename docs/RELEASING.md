@@ -7,15 +7,15 @@ change has a version identity and a stated reason.
 ## The rules
 
 1. **`plugin.json` is authoritative.** The `version` in
-   `.claude-plugin/plugin.json` is the single source of truth. The copy in
-   `.claude-plugin/marketplace.json` is a mirror and must always be equal.
-   CI fails the build if they diverge.
+   `.claude-plugin/plugin.json` is the single source of truth. The copies in
+   `.claude-plugin/marketplace.json` and `.codex-plugin/plugin.json` are
+   mirrors and must always be equal. CI fails the build if they diverge.
 
 2. **Every shipping change bumps the version.** A *shipping change* is any
-   change under `SKILL.md`, `agents/`, `hooks/`, `references/`, `tools/`, or
-   `.claude-plugin/` — the things a user actually installs and runs. Bump the
-   version in the same PR. Changes confined to repo docs, tests, or CI must
-   *not* bump the version. CI enforces both directions of this on PRs.
+   change under `skills/`, `agents/`, `hooks/`, `tools/`, `.claude-plugin/`,
+   or `.codex-plugin/` — the things a user actually installs and runs. Bump
+   the version in the same PR. Changes confined to repo docs, tests, or CI
+   must *not* bump the version. CI enforces both directions of this on PRs.
 
 3. **Every version bump gets a changelog entry.** Add a section to
    `CHANGELOG.md` in the same PR. CI fails a PR that bumps the version

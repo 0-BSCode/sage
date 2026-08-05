@@ -31,12 +31,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Manifests must pass schema validation
+        # Catches schema-level rot the runtime tolerates (unrecognized fields,
+        # missing metadata). Complements tests/test_plugin_manifests.py, which
+        # checks manifest-vs-layout coherence instead.
+        run: npx -y @anthropic-ai/claude-code plugin validate . --strict
+
       - name: Version fields must match (plugin.json is authoritative)
         run: |
           plugin=$(jq -r .version .claude-plugin/plugin.json)
           marketplace=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          codex=$(jq -r .version .codex-plugin/plugin.json)
           if [ "$plugin" != "$marketplace" ]; then
             echo "::error::marketplace.json ($marketplace) must mirror plugin.json ($plugin) — see docs/RELEASING.md"
+            exit 1
+          fi
+          if [ "$plugin" != "$codex" ]; then
+            echo "::error::.codex-plugin/plugin.json ($codex) must mirror .claude-plugin/plugin.json ($plugin) — see docs/RELEASING.md"
             exit 1
           fi
           echo "Versions in sync: $plugin"
@@ -51,13 +62,18 @@ jobs:
           # Shipped files. Manifest edits count only when something OTHER than
           # the version fields changed — otherwise a bump alone would make a
           # docs-only PR look like a shipping change and dodge the rejection.
-          shipped=$(git diff --name-only "$base"...HEAD -- SKILL.md agents hooks references tools)
-          for f in $(git diff --name-only "$base"...HEAD -- .claude-plugin); do
+          shipped=$(git diff --name-only "$base"...HEAD -- SKILL.md agents hooks references skills tools)
+          for f in $(git diff --name-only "$base"...HEAD -- .claude-plugin .codex-plugin); do
             case "$f" in
-              .claude-plugin/plugin.json)      strip='del(.version)' ;;
-              .claude-plugin/marketplace.json) strip='del(.plugins[].version)' ;;
+              .claude-plugin/plugin.json|.codex-plugin/plugin.json) strip='del(.version)' ;;
+              .claude-plugin/marketplace.json)                      strip='del(.plugins[].version)' ;;
               *) shipped="$shipped"$'\n'"$f"; continue ;;
             esac
+            # A manifest absent from base is new — a shipping change, and
+            # `git show` on it would fail the step.
+            if ! git cat-file -e "$base:$f" 2>/dev/null; then
+              shipped="$shipped"$'\n'"$f"; continue
+            fi
             if [ "$(git show "$base":"$f" | jq "$strip")" != "$(jq "$strip" "$f")" ]; then
               shipped="$shipped"$'\n'"$f"
             fi

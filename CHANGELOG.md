@@ -4,6 +4,78 @@ All notable changes to the sage plugin are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning rules: see [docs/RELEASING.md](docs/RELEASING.md).
 
+## [1.2.0] - 2026-08-04
+
+Multi-Host support: Sage now installs on Codex CLI with one command, alongside
+Claude Code. Minor, not major — the **Compatibility Surface** is untouched:
+`/sage learn <topic>` still works and every existing **Artifact** reads unchanged.
+Most of this improves the Claude build too, because it is mostly deletion.
+
+Design and decisions: ADRs 0006–0008.
+
+### Added
+
+- `.codex-plugin/plugin.json` — Codex install. Both manifests point at one
+  `hooks/claude-codex-hooks.json`; `${CLAUDE_PLUGIN_ROOT}` expands on both Hosts
+  and Codex normalizes the event names, so there is no per-Host hook config.
+- `skills/sage/agents/openai.yaml` — Codex UI metadata and invocation policy.
+- `tools/cross_refs_check.py` — the cross-refs invariant, extracted from the hook.
+- `tests/test_plugin_manifests.py` — manifest/layout coherence, Host-neutral prose,
+  and router grammar messages.
+- `scripts/link-skills.sh` — development only; links the working tree into every
+  Host's skill directory.
+
+### Changed
+
+- **Layout:** `SKILL.md` and `references/` moved under `skills/sage/`. Codex's
+  `skills` field points at a *container* of skill directories. `agents/`, `tools/`,
+  and `hooks/` stay at the plugin root, so `$SAGE_ROOT` is unchanged.
+- **Invocation:** Sage is now user-invoked in both harnesses
+  (`disable-model-invocation: true`, `allow_implicit_invocation: false`). It
+  side-effects on invocation, so no Host should fire it implicitly. There is no
+  longer a conversational path back into a session — type the command.
+- **The coach no longer parses the invocation.** The learner's request is passed to
+  `session_router.py` verbatim; `parse_invocation` remains the only parser on every
+  Host. Router grammar messages dropped their `/sage` prefix — on a Host without
+  slash commands they were naming a command that does not exist.
+- **Delegation is prose.** All 14 `Task(subagent_type=…)` call sites now name the
+  Clerk and lead with its spec pointer. No Host API appears in the prompt layer.
+- **Hooks:** `checkpoint-guard` moved to `SubagentStart`, `reset-verification` to
+  `SubagentStop`. Both identify a Clerk by registered type *or* by the spec pointer
+  in the prompt, since Sage registers no Codex agents. All scripts now fail open and
+  carry a 5s timeout.
+- **The one blocking invariant moved into a tool.** `enforce-cross-refs.sh` is the
+  only hook that blocks; its check now lives in `tools/cross_refs_check.py` and runs
+  from `session_wrapup.py` too, so it holds on Hosts with no hooks. The hook is the
+  automatic trigger on Claude and Codex.
+- Every bootstrap line prefers an exported root:
+  `SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"`.
+- Hook state files renamed `/tmp/claude-*` → `/tmp/sage-*`.
+- `ref-subagents.md` gained the three operations it always omitted —
+  `coach-reflect`, `patch-metrics`, `verify-demo` — all of which the prompt layer
+  already called.
+
+### Fixed
+
+- **Duration could be fabricated off-Claude.** With no `CLAUDE_CODE_SESSION_ID`,
+  `session_duration.py` fell back to "newest transcript under the cwd" and returned
+  an unrelated session's wall time with exit 0, straight into the journal.
+  `session_wrapup.py` now skips the call entirely when no session id identifies a
+  transcript, and the Clerk asks the learner instead (the degradation ADR 0004 built).
+- `tests/test_enforce_cross_refs.py` depended on `/tmp/.sage-plugin-root` existing,
+  so it only passed on a machine with Sage installed.
+- `enforce-cross-refs.sh` cited a `CLAUDE.md` Cross-Reference Protocol that does not
+  exist in this repo.
+- The session-metrics removal plan read `Status: not started` long after the code
+  shipped.
+
+### Notes
+
+- `verification-gate`'s `audit` operation is documented as **not reachable** from the
+  current grammar — nothing calls it, and adding a verb is an ADR 0002 decision.
+- Known issue, accepted: `/tmp/.sage-plugin-root` is one global slot shared by every
+  Host. See `KNOWN-ISSUES.md` for the escape hatch.
+
 ## [1.1.0] - 2026-07-29
 
 Over-engineering audit: ~1,900 lines removed from `tools/`, no feature lost.
