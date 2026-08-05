@@ -10,12 +10,8 @@ import unittest
 import uuid
 from pathlib import Path
 
-SCRIPT = str(
-    Path(__file__).resolve().parent.parent
-    / "hooks"
-    / "scripts"
-    / "enforce-cross-refs.sh"
-)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT = str(REPO_ROOT / "hooks" / "scripts" / "enforce-cross-refs.sh")
 
 
 class TestEnforceCrossRefs(unittest.TestCase):
@@ -36,6 +32,9 @@ class TestEnforceCrossRefs(unittest.TestCase):
     def _run(self, input_json: dict) -> subprocess.CompletedProcess:
         env = os.environ.copy()
         env["SAGE_DIR"] = self.tmpdir
+        # Pin the plugin root too — without it the script falls back to
+        # /tmp/.sage-plugin-root, which exists only on a dev machine.
+        env["SAGE_ROOT"] = str(REPO_ROOT)
         return subprocess.run(
             ["bash", SCRIPT],
             input=json.dumps(input_json),

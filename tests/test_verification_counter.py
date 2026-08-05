@@ -21,8 +21,8 @@ class TestVerificationCounter(unittest.TestCase):
 
     def setUp(self):
         self.session_id = f"test-{uuid.uuid4().hex[:8]}"
-        self.counter_file = f"/tmp/claude-verif-counter-{self.session_id}"
-        self.warned_file = f"/tmp/claude-verif-warned-{self.session_id}"
+        self.counter_file = f"/tmp/sage-verif-counter-{self.session_id}"
+        self.warned_file = f"/tmp/sage-verif-warned-{self.session_id}"
 
     def tearDown(self):
         for f in [self.counter_file, self.warned_file]:

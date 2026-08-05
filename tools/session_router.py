@@ -108,19 +108,22 @@ def suggest_slug(slug, learning_root):
 
 def _unknown_verb(verb, topic, sage_root):
     """Build a helpful error for an unrecognized leading verb."""
+    # Messages carry no host syntax (no `/sage` prefix): on a Host without
+    # slash commands this branch is the primary way the grammar is taught,
+    # and it must not name a command that does not exist there. See docs/adr/0008.
     if verb in LEGACY_RESUME_KEYWORDS:
         # Without this branch the generic message below reads
-        # "`/sage learn continue` to learn it" — it would interpolate the
+        # "`learn continue` to learn it" — it would interpolate the
         # keyword as if it were a topic name.
-        hint = f"/sage learn {topic}".strip()
+        hint = f"learn {topic}".strip()
         message = f"'{verb}' is no longer a command. Did you mean `{hint}`?"
         suggestion = "learn"
     else:
-        # Most likely a legacy bare-topic invocation like `/sage react hooks`.
+        # Most likely a legacy bare-topic invocation like `react hooks`.
         full = f"{verb} {topic}".strip()
         message = (
             f"Unknown verb '{verb}'. Commands now require a verb: "
-            f"`/sage learn {full}` to learn it, or `/sage archive <topic>` to archive it."
+            f"`learn {full}` to learn it, or `archive <topic>` to archive it."
         )
         suggestion = None
     return {
@@ -142,7 +145,7 @@ def route(sage_root, raw_args):
             "mode": "unknown_verb",
             "verb": "",
             "suggestion": None,
-            "message": "Usage: `/sage learn <topic>` or `/sage archive <topic>`.",
+            "message": "Usage: `learn <topic>` or `archive <topic>`.",
             "sage_root": sage_root,
         }
 

@@ -19,7 +19,7 @@ class TestCheckpointGuard(unittest.TestCase):
 
     def setUp(self):
         self.session_id = f"test-{uuid.uuid4().hex[:8]}"
-        self.cards_flag = f"/tmp/claude-cards-verified-{self.session_id}"
+        self.cards_flag = f"/tmp/sage-cards-verified-{self.session_id}"
 
     def tearDown(self):
         for f in [self.cards_flag]:

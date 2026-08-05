@@ -1,47 +1,58 @@
 #!/usr/bin/env bash
-# PostToolUse hook on Agent: resets the verification counter when
-# a verification-gate agent is called. Also marks card verification
+# SubagentStop hook: resets the verification counter when a
+# verification-gate Clerk is called. Also marks card verification
 # for the checkpoint guard.
 #
 # Activates the counter on first verification-gate call in a session.
+#
+# Host-neutral: the Clerk is identified by the registered agent type
+# (Claude: .tool_input.subagent_type, Codex: .agent_type) OR by the spec
+# pointer the prose delegation carries in the prompt. Matching the spec
+# path also sidesteps the plugin-namespace prefix problem that forced
+# glob-suffix matching here (see hooks/README.md).
+#
+# Fails open: unparseable stdin or a missing jq exits 0 rather than
+# blocking a session on an untested Host.
 
-set -euo pipefail
+set -uo pipefail
 
-INPUT=$(cat)
+INPUT=$(cat 2>/dev/null) || exit 0
+[ -n "$INPUT" ] || exit 0
 
-SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null) || exit 0
+IDENT=$(echo "$INPUT" | jq -r '.agent_type // .tool_input.subagent_type // empty' 2>/dev/null) || exit 0
+PROMPT=$(echo "$INPUT" | jq -r '.prompt // .tool_input.prompt // empty' 2>/dev/null) || exit 0
 
-SUBAGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty')
-PROMPT=$(echo "$INPUT" | jq -r '.tool_input.prompt // empty')
+COUNTER_FILE="/tmp/sage-verif-counter-${SESSION_ID}"
+WARNED_FILE="/tmp/sage-verif-warned-${SESSION_ID}"
 
 # Reset on artifact-clerk checkpoint (end of teaching phase)
-if [[ "$SUBAGENT_TYPE" == *"artifact-clerk" ]]; then
-  if echo "$PROMPT" | grep -qi "checkpoint"; then
-    COUNTER_FILE="/tmp/claude-verif-counter-${SESSION_ID}"
-    if [ -f "$COUNTER_FILE" ]; then
-      echo "0" > "$COUNTER_FILE"
+case "$IDENT$PROMPT" in
+  *artifact-clerk*)
+    if echo "$PROMPT" | grep -qi "checkpoint"; then
+      if [ -f "$COUNTER_FILE" ]; then
+        echo "0" > "$COUNTER_FILE"
+      fi
+      rm -f "$WARNED_FILE"
     fi
-    WARNED_FILE="/tmp/claude-verif-warned-${SESSION_ID}"
-    rm -f "$WARNED_FILE"
-  fi
-  exit 0
-fi
+    exit 0
+    ;;
+esac
 
-if [[ "$SUBAGENT_TYPE" != *"verification-gate" ]]; then
-  exit 0
-fi
+case "$IDENT$PROMPT" in
+  *verification-gate*) ;;
+  *) exit 0 ;;
+esac
 
 # Reset the message counter (creates it if first call)
-COUNTER_FILE="/tmp/claude-verif-counter-${SESSION_ID}"
 echo "0" > "$COUNTER_FILE"
 
 # Clear warned flag
-WARNED_FILE="/tmp/claude-verif-warned-${SESSION_ID}"
 rm -f "$WARNED_FILE"
 
 # If this was a verify-cards operation, mark it for the checkpoint guard
 if echo "$PROMPT" | grep -qi "verify-cards"; then
-  CARDS_FLAG="/tmp/claude-cards-verified-${SESSION_ID}"
+  CARDS_FLAG="/tmp/sage-cards-verified-${SESSION_ID}"
   echo "1" > "$CARDS_FLAG"
 fi
 
