@@ -5,18 +5,30 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"${CLAUDE_PLUGIN_ROOT}\" > /tmp/.sage-plugin-root && python3 \"${CLAUDE_PLUGIN_ROOT}/tools/config.py\" > /tmp/.sage-learning-root 2>/dev/null || true"
+            "command": "echo \"${CLAUDE_PLUGIN_ROOT}\" > /tmp/.sage-plugin-root && python3 \"${CLAUDE_PLUGIN_ROOT}/tools/config.py\" > /tmp/.sage-learning-root 2>/dev/null || true",
+            "timeout": 5
           }
         ]
       }
     ],
-    "PreToolUse": [
+    "SubagentStart": [
       {
-        "matcher": "Agent",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/checkpoint-guard.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/checkpoint-guard.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/reset-verification.sh\"",
+            "timeout": 5
           }
         ]
       }
@@ -27,22 +39,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/enforce-cross-refs.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/enforce-cross-refs.sh\"",
+            "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verification-counter.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/reset-verification.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verification-counter.sh\"",
+            "timeout": 5
           }
         ]
       }
