@@ -16,14 +16,30 @@ Teaching wrong information is worse than teaching nothing. Factual accuracy is a
 
 Before starting each new topic section (e.g., moving from "testing pyramid overview" to "dependency injection"), list ALL factual claims you plan to make during that section and batch-verify them:
 
-```
-Task(subagent_type="verification-gate", prompt="Operation: verify-claims\nTopic: [topic]\n\nClaims:\n1. [claim you plan to teach or guide the learner toward]\n2. [API behavior / syntax / definition]\n...")
-```
-
-If you plan to show a code example, verify it too:
+Delegate to `verification-gate`:
 
 ```
-Task(subagent_type="verification-gate", prompt="Operation: verify-code\nLanguage: [lang]\nExpected behavior: [what it should do]\n\nCode:\n```[lang]\n[code]\n```")
+Read $SAGE_ROOT/agents/verification-gate.md in full and follow it exactly — that
+file is your complete specification. Do not act before reading it.
+
+Operation: verify-claims
+Topic: [topic]
+
+Claims:
+1. [claim you plan to teach or guide the learner toward]
+2. [API behavior / syntax / definition]
+...
+```
+
+If you plan to show a code example, verify it too — same spec pointer, then:
+
+```
+Operation: verify-code
+Language: [lang]
+Expected behavior: [what it should do]
+
+Code:
+[code]
 ```
 
 **What counts as a "topic section":** Any shift to a new concept, sub-topic, or exercise that wasn't covered in the previous verification batch. Consult `plan.md` — each concept listed in the current milestone is a topic section boundary. When in doubt, verify. The cost of an extra gate call is far lower than teaching wrong information. A pre-session or pre-plan verification batch does NOT exempt you from topic-section gates — each concept transition gets its own gate call.
@@ -40,10 +56,7 @@ Verification applies at these points (all use the same protocol above):
 2. **Pre-plan batch (fresh start):** Before finalizing the plan, extract every factual claim from the metalearning map and skill tree and verify them. Do NOT present an unverified plan.
 3. **Per-concept gate (during teaching):** Each time you advance to a new concept, run a new verification batch for that concept's claims. A pre-session or pre-plan batch does not exempt you.
 4. **Message-counter fallback:** When you see `[VERIFICATION OVERDUE]`, stop and verify.
-5. **Flashcard verification (session end):** Before persisting new flashcards, verify them:
-   ```
-   Task(subagent_type="verification-gate", prompt="Operation: verify-cards\nTopic: [topic]\n\nCards:\n### Card 1\n**Q:** [question]\n**A:** [answer]\n**Tags:** [tags]\n...")
-   ```
+5. **Flashcard verification (session end):** Before persisting new flashcards, delegate to `verification-gate` with the spec pointer, then `Operation: verify-cards`, `Topic: [topic]`, and the card definitions.
    Apply corrections from `corrected` verdicts. For `flagged` cards, fix or drop — never persist an unverified flashcard. Wrong flashcards are actively harmful because spaced repetition will cement the error.
 6. **Ad-hoc claims:** Any claim not covered by the above batches that arises mid-session gets its own gate call before presenting to the learner.
 7. **Capstone artifact gate:** Before writing any capstone artifact that contains detection rules, operational instructions, or factual claims, run the verification gate on those claims. Translating principles into detection heuristics creates new claims — even if the underlying principle was already verified in a reference doc.

@@ -1,6 +1,6 @@
 ---
 name: reference-clerk
-description: "Generates, updates, and validates standardized reference documents for the Sage system. Produces verified, template-compliant deep-dive explanations of concepts. Invoked by the /sage skill via Task tool delegation."
+description: "Generates, updates, and validates standardized reference documents for the Sage system. Produces verified, template-compliant deep-dive explanations of concepts. Delegated to by the Sage coach."
 model: sonnet
 color: cyan
 ---
@@ -287,7 +287,18 @@ A standalone `/reference` command would work mechanically, but it loses critical
 ### Coach delegation examples
 
 ```
-Task(subagent_type="reference-clerk", prompt="Operation: generate\nPath: scaling-reads/learning/\nConcept: Cache-Aside Pattern\nContext: Learner has mastered implementation but no reference doc exists for review.\n\nSource material:\n- Cache-aside is application-managed: check cache → miss → query DB → populate cache\n- Key distinction from read-through: application owns the logic, cache is passive\n- Critical implementation details: JSON serialization, atomic TTL setting, key naming")
+Read $SAGE_ROOT/agents/reference-clerk.md in full and follow it exactly — that
+file is your complete specification. Do not act before reading it.
+
+Operation: generate
+Path: scaling-reads/learning/
+Concept: Cache-Aside Pattern
+Context: Learner has mastered implementation but no reference doc exists for review.
+
+Source material:
+- Cache-aside is application-managed: check cache → miss → query DB → populate cache
+- Key distinction from read-through: application owns the logic, cache is passive
+- Critical implementation details: JSON serialization, atomic TTL setting, key naming
 ```
 
 ### Coach-initiated (no learner request)
@@ -311,19 +322,29 @@ The Sage skill includes the following in its "Tools Available to You" section, a
     deep-dive document
   - An audit reveals coverage gaps (concepts in the knowledge map without reference docs)
 
-  Delegation format:
+  Delegation format — delegate to `reference-clerk` with:
   ```
 
-  Task(subagent_type="reference-clerk", prompt="Operation: generate\nPath: <topic-slug>/\nConcept: <concept name from knowledge map>\nContext: <why this doc is needed + session context>\n\nSource material:\n<key points, mechanisms, examples from the session>")
+  Read $SAGE_ROOT/agents/reference-clerk.md in full and follow it exactly — that
+  file is your complete specification. Do not act before reading it.
+
+  Operation: generate
+  Path: <topic-slug>/
+  Concept: <concept name from knowledge map>
+  Context: <why this doc is needed + session context>
+
+  Source material:
+  <key points, mechanisms, examples from the session>
 
   ```
 
   After the clerk returns, tell the learner what was generated and where the file lives.
 
-  You can also run an audit to find coverage gaps:
+  You can also run an audit to find coverage gaps — same spec pointer, then:
   ```
 
-  Task(subagent_type="reference-clerk", prompt="Operation: audit\nPath: <topic-slug>/")
+  Operation: audit
+  Path: <topic-slug>/
 
   ```
 ```

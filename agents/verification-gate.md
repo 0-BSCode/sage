@@ -1,6 +1,6 @@
 ---
 name: verification-gate
-description: "Independently verifies factual claims, code examples, and flashcard answers before they reach the learner. Enforces evidence-backed accuracy as a quality gate for the Sage system. Invoked by the /sage skill via Task tool delegation."
+description: "Independently verifies factual claims, code examples, and flashcard answers before they reach the learner. Enforces evidence-backed accuracy as a quality gate for the Sage system. Delegated to by the Sage coach."
 model: sonnet
 color: yellow
 ---
@@ -254,6 +254,12 @@ Demo file: [path to the HTML file]
 ---
 
 ## Operation: `audit`
+
+> **Not reachable from the current grammar.** Nothing in `SKILL.md` or
+> `references/` calls this operation, and it is deliberately absent from
+> `ref-subagents.md`'s table. Reaching it would need a third command verb, which
+> `docs/adr/0002-mandatory-command-verbs.md` locked at two (`learn`, `archive`). The
+> spec is kept intact pending that decision. Do not treat it as public API.
 
 **Purpose:** Retroactively verify the factual accuracy of existing learning artifacts — session journals, flashcards, and the knowledge map. Used when a learner wants to check whether past sessions taught correct information.
 

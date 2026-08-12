@@ -2,18 +2,22 @@
 # Stop hook: counts coach messages since last verification-gate call.
 # Warns when 5+ messages have passed without verification.
 #
-# State file: /tmp/claude-verif-counter-<session_id>
+# State file: /tmp/sage-verif-counter-<session_id>
 # The counter file is created by reset-verification.sh on the first
 # verification-gate call. If it doesn't exist, this hook is a no-op
 # (we're not in a session that uses verification).
+#
+# Fails open: unparseable stdin or a missing jq exits 0 rather than
+# blocking a session on an untested Host.
 
-set -euo pipefail
+set -uo pipefail
 
-INPUT=$(cat)
+INPUT=$(cat 2>/dev/null) || exit 0
+[ -n "$INPUT" ] || exit 0
 
-SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
-STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active')
-COUNTER_FILE="/tmp/claude-verif-counter-${SESSION_ID}"
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null) || exit 0
+STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null) || exit 0
+COUNTER_FILE="/tmp/sage-verif-counter-${SESSION_ID}"
 
 # Prevent infinite loops
 if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
@@ -32,7 +36,7 @@ echo "$COUNT" > "$COUNTER_FILE"
 
 # Warn once at 5+
 if [ "$COUNT" -ge 5 ]; then
-  WARNED_FILE="/tmp/claude-verif-warned-${SESSION_ID}"
+  WARNED_FILE="/tmp/sage-verif-warned-${SESSION_ID}"
   if [ ! -f "$WARNED_FILE" ]; then
     echo "1" > "$WARNED_FILE"
     cat <<EOF

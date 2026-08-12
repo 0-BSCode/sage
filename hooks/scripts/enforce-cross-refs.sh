@@ -1,81 +1,46 @@
 #!/bin/bash
 # Stop hook: blocks session end if knowledge maps were modified
-# but cross-reference registry wasn't updated.
-# Only fires when cwd is the sage repo.
+# but the cross-reference registry wasn't updated.
+# Only fires when cwd is under the Learning Root.
+#
+# The check itself lives in tools/cross_refs_check.py so it holds on Hosts
+# with no hook system — this script is only the automatic trigger on Claude
+# and Codex. See docs/adr/0006-hooks-are-advisory-invariants-live-in-tools.md.
+#
+# Fails open: unparseable stdin or a missing jq exits 0 rather than
+# blocking a session on an untested Host.
 
-set -euo pipefail
+set -uo pipefail
 
 SAGE_DIR="${SAGE_DIR:-$(cat /tmp/.sage-learning-root 2>/dev/null)}"
 if [ -z "$SAGE_DIR" ]; then
   exit 0
 fi
-THRESHOLD=1800  # 30 minutes
 
-INPUT=$(cat)
+SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"
+if [ -z "$SAGE_ROOT" ]; then
+  exit 0
+fi
 
-CWD=$(echo "$INPUT" | jq -r '.cwd // ""')
-STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active')
+INPUT=$(cat 2>/dev/null) || exit 0
+[ -n "$INPUT" ] || exit 0
+
+CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null) || exit 0
+STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null) || exit 0
 
 if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
   exit 0
 fi
 
-# Only fire in the sage repo (or a subdirectory)
+# Only fire under the Learning Root (or a subdirectory)
 if [[ "$CWD" != "$SAGE_DIR"* ]]; then
   exit 0
 fi
 
-CROSS_REFS_DIR="${SAGE_DIR}/cross-refs"
+REASON=$(python3 "$SAGE_ROOT/tools/cross_refs_check.py" "$SAGE_DIR" 2>/dev/null) || exit 0
 
-NOW=$(date +%s)
-
-# Check if any knowledge-map.md was modified within threshold
-# AND has concepts at developing or higher (not just created with all not_started)
-KM_MODIFIED=false
-KM_HAS_PROMOTED=false
-while IFS= read -r km; do
-  KM_MTIME=$(stat -c %Y "$km" 2>/dev/null || echo 0)
-  KM_AGE=$((NOW - KM_MTIME))
-  if [ "$KM_AGE" -lt "$THRESHOLD" ]; then
-    KM_MODIFIED=true
-    if grep -qE '\| (developing|solid|mastered) \|' "$km" 2>/dev/null; then
-      KM_HAS_PROMOTED=true
-    fi
-    break
-  fi
-done < <(find "$SAGE_DIR" -name "knowledge-map.md" 2>/dev/null)
-
-if [ "$KM_MODIFIED" != "true" ]; then
-  exit 0
-fi
-
-if [ "$KM_HAS_PROMOTED" != "true" ]; then
-  exit 0
-fi
-
-# Knowledge map modified — check if cross-refs were updated too
-CR_UPDATED=false
-
-# Check sharded cross-refs/ directory
-if [ -d "$CROSS_REFS_DIR" ]; then
-  while IFS= read -r cr; do
-    CR_MTIME=$(stat -c %Y "$cr" 2>/dev/null || echo 0)
-    CR_AGE=$((NOW - CR_MTIME))
-    if [ "$CR_AGE" -lt "$THRESHOLD" ]; then
-      CR_UPDATED=true
-      break
-    fi
-  done < <(find "$CROSS_REFS_DIR" -name "*.md" 2>/dev/null)
-fi
-
-# Knowledge map modified but cross-references weren't — block
-if [ "$CR_UPDATED" != "true" ]; then
-  cat <<'EOF'
-{
-  "decision": "block",
-  "reason": "Knowledge map(s) were modified this session but cross-refs/ was not updated. Per CLAUDE.md Cross-Reference Protocol: upsert any concept that reached Developing or higher into cross-refs/<project>.md before ending the session."
-}
-EOF
+if [ -n "$REASON" ]; then
+  jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
 fi
 
 exit 0

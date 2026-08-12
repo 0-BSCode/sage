@@ -10,7 +10,7 @@
 
 **An AI tutor for serious self-learners.**
 
-Sage runs inside Claude Code and turns study into active recall, Socratic coaching, verified explanations, spaced review, and durable local learning records.
+Sage runs inside Claude Code and Codex CLI, and turns study into active recall, Socratic coaching, verified explanations, spaced review, and durable local learning records.
 
 > **Beta** — Sage is early. Mostly the happy path has been tested, so straying off it may surface bugs, and features are still changing. Bug reports and feedback are very welcome via [issues](../../issues).
 
@@ -51,19 +51,39 @@ Sage: Good instinct. But you said it's offloaded to "another stack."
 ## Requirements
 
 - Python 3.8+
-- Claude Code
+- Claude Code or Codex CLI
 - No pip packages required (stdlib only)
 
 ## Install
+
+**Claude Code**
 
 ```bash
 /plugin marketplace add 0-BSCode/sage
 /plugin install sage@sage
 ```
 
+**Codex CLI**
+
+```bash
+codex plugin marketplace add 0-BSCode/sage
+codex plugin add sage@sage
+```
+
+Then run `codex`, open `/hooks`, review and trust Sage's four lifecycle hooks,
+and start a new thread. Codex pins each hook by hash, so it asks again after an
+update that changes one. Until you trust them Sage still teaches — you lose the
+verification nudges, not the coaching. See
+[docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
+
 ## Usage
 
-Every command takes a verb: `/sage learn <topic>` or `/sage archive <topic>`.
+Every command takes a verb: `learn <topic>` or `archive <topic>`.
+
+On Claude Code these are slash commands — `/sage learn <topic>`. In Codex,
+invoke the skill explicitly and include the verb: `$sage:sage learn React hooks`.
+Everything below is written in the Claude
+form; the verb and topic are what matter on either Host.
 
 ### First session
 

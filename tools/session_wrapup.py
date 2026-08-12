@@ -74,20 +74,43 @@ def run(sage_root, topic_path, session_id=""):
         insights_ok = True
 
     # 3. Session duration (current-sitting wall time from the transcript)
-    duration_cmd = [
-        "python3", os.path.join(sage_root, "tools", "session_duration.py"),
-    ]
-    if session_id:
-        duration_cmd.append(session_id)
+    #
+    # Only attempt this when a session id identifies the transcript. With no
+    # id, session_duration.py falls back to "newest .jsonl under the cwd-derived
+    # directory" — which off-Claude returns an *unrelated* session's wall time
+    # with exit 0, indistinguishable from a correct answer once it reaches the
+    # journal. That guess path exists for manual terminal use, not for a Host
+    # that never sets CLAUDE_CODE_SESSION_ID. See docs/adr/0004.
+    resolved_id = session_id or os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    if resolved_id:
+        duration_cmd = [
+            "python3", os.path.join(sage_root, "tools", "session_duration.py"),
+            resolved_id,
+        ]
+        duration_ok, duration_out = run_script(duration_cmd, "session_duration")
+        duration = duration_out if duration_ok and duration_out else None
+        if not duration_ok:
+            # Non-blocking: duration is best-effort. The clerk falls back to asking the learner.
+            errors.append(f"session_duration: {duration_out}")
+    else:
+        # No transcript we can trust — the clerk asks the learner for wall time.
+        duration = None
 
-    duration_ok, duration_out = run_script(duration_cmd, "session_duration")
-    duration = duration_out if duration_ok and duration_out else None
-    if not duration_ok:
-        # Non-blocking: duration is best-effort. The clerk falls back to asking the learner.
-        errors.append(f"session_duration: {duration_out}")
+    # 4. Cross-refs invariant. Enforced here rather than only in the Stop hook
+    # so it holds on Hosts with no hook system. See docs/adr/0006.
+    cross_refs_stale = None
+    try:
+        sys.path.insert(0, os.path.join(sage_root, "tools"))
+        from config import get_learning_root
+        from cross_refs_check import check as check_cross_refs
+
+        cross_refs_stale = check_cross_refs(get_learning_root())
+    except Exception as e:
+        errors.append(f"cross_refs_check: {e}")
 
     return {
         "duration": duration,
+        "cross_refs_stale": cross_refs_stale,
         "coach_metrics_ok": coach_metrics_ok,
         "coach_metrics_flags": coach_metrics_flags,
         "insights_ok": insights_ok,

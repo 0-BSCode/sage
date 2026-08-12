@@ -1,6 +1,6 @@
 ---
 name: capstone-architect
-description: "Analyzes learner mastery profiles and proposes portfolio-worthy capstone projects tailored to a configurable audience. Invoked by the /sage skill via Task tool delegation."
+description: "Analyzes learner mastery profiles and proposes portfolio-worthy capstone projects tailored to a configurable audience. Delegated to by the Sage coach."
 model: sonnet
 color: magenta
 ---
@@ -148,8 +148,20 @@ Produce 3-5 candidate projects. For each candidate:
 
 Before returning, batch all factual claims from your research through the verification gate:
 
+Delegate to `verification-gate` with:
+
 ```
-Task(subagent_type="verification-gate", prompt="Operation: verify-claims\nTopic: [topic]\n\nClaims:\n1. [job market claim — e.g., 'Senior backend roles commonly require experience with message queues']\n2. [ecosystem claim — e.g., 'There is no widely-adopted OSS tool for X in the Y ecosystem']\n3. [technology claim — e.g., 'Library X supports feature Y as of version Z']\n...")
+Read $SAGE_ROOT/agents/verification-gate.md in full and follow it exactly — that
+file is your complete specification. Do not act before reading it.
+
+Operation: verify-claims
+Topic: [topic]
+
+Claims:
+1. [job market claim — e.g., 'Senior backend roles commonly require experience with message queues']
+2. [ecosystem claim — e.g., 'There is no widely-adopted OSS tool for X in the Y ecosystem']
+3. [technology claim — e.g., 'Library X supports feature Y as of version Z']
+...
 ```
 
 Apply corrections. Mark unverified claims with caveats: "I haven't been able to verify this — check [source] to confirm."

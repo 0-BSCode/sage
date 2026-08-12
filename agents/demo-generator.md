@@ -1,6 +1,6 @@
 ---
 name: demo-generator
-description: "Generates targeted interactive HTML demos to correct persistent misconceptions that text-based interventions have failed to resolve. Invoked by the /sage skill via Task tool delegation."
+description: "Generates targeted interactive HTML demos to correct persistent misconceptions that text-based interventions have failed to resolve. Delegated to by the Sage coach."
 model: sonnet
 color: magenta
 ---
@@ -158,7 +158,7 @@ Do NOT write to `docs/demos/index.md` directly. Use the `demo_index_writer.py` s
 
 Build a JSON object from the demo metadata and pipe it to the script:
 ```bash
-SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
+SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"
 echo '<json>' | python3 "$SAGE_ROOT/tools/demo/demo_index_writer.py" append <path>/docs/demos/ --stdin
 ```
 Where `<json>` is:
@@ -222,18 +222,22 @@ Updates:
 
 The coach mediates all invocations (same pattern as reference-clerk):
 
-```
-Task(subagent_type="demo-generator",
-  prompt="Operation: generate
-    Path: <topic-slug>/
-    Concept: <concept name from knowledge map>
-    Context: <why this is needed — session history, what's been tried>
+The coach delegates to `demo-generator` with:
 
-    Weak spot: WS-31 — one-sided vs two-sided z-value confusion
-    Collision point: confuses z_a (one-sided) with z_{a/2} (two-sided)
-    Learner's wrong model: thinks one-sided a=0.05 uses z_{0.025} = 1.96
-    Correct model: one-sided a=0.05 uses z_a = z_{0.05} = 1.645; two-sided uses z_{a/2} = z_{0.025} = 1.96
-    What's been tried: mnemonics, warm-ups, consolidation drilling across sessions 14, 15, 24, 27")
+```
+Read $SAGE_ROOT/agents/demo-generator.md in full and follow it exactly — that
+file is your complete specification. Do not act before reading it.
+
+Operation: generate
+Path: <topic-slug>/
+Concept: <concept name from knowledge map>
+Context: <why this is needed — session history, what's been tried>
+
+Weak spot: WS-31 — one-sided vs two-sided z-value confusion
+Collision point: confuses z_a (one-sided) with z_{a/2} (two-sided)
+Learner's wrong model: thinks one-sided a=0.05 uses z_{0.025} = 1.96
+Correct model: one-sided a=0.05 uses z_a = z_{0.05} = 1.645; two-sided uses z_{a/2} = z_{0.025} = 1.96
+What's been tried: mnemonics, warm-ups, consolidation drilling across sessions 14, 15, 24, 27
 ```
 
 The coach invokes demo generation when:

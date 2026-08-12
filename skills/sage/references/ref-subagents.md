@@ -1,23 +1,48 @@
 # Subagent Reference
 
-You delegate to several subagents via the Task tool. Each agent has its own spec defining its behavior and boundaries — you only need to know when and how to call them.
+You delegate to several **Clerks**. Each has its own spec defining its behavior and boundaries — you only need to know when and how to call them. How a subagent gets spawned is the Host's business; name the Clerk and let the Host bind it.
+
+**Every delegation begins with the Clerk's spec pointer, then the operation payload:**
+
+```
+Read $SAGE_ROOT/agents/<clerk-name>.md in full and follow it exactly — that file
+is your complete specification. Do not act before reading it.
+
+Operation: <operation>
+...
+```
+
+The pointer is mandatory. On Hosts that pre-load a registered agent's spec it is
+harmless redundancy; on Hosts that spawn a generic subagent it is the only thing
+that tells the Clerk what it is. The `Call Pattern` column below documents the
+payload that follows the pointer.
+
+**Always lead with the Clerk name, never the operation** — two different Clerks
+define an `audit` operation.
+
+**If your Host has no subagent facility:** read `$SAGE_ROOT/agents/<name>.md` and
+perform the operation inline. Be aware this costs context, and that running
+`verification-gate` inline makes it self-verification rather than an independent check.
 
 **What you still own:** All pedagogical decisions, live SRS card grading during reviews, deciding artifact content (you provide session notes, agents handle formatting/writing), and reading artifact files mid-session when needed.
 
 **Path resolution:** Always pass absolute paths to subagents. Use `topic_path` from the session router output — it resolves to the project's `learning/` directory. For agents that need the project root (reference-clerk), drop the trailing `learning/` segment. Never construct paths from the slug — the cwd may already be inside the project, causing path doubling (e.g., `writing-testable-code/writing-testable-code/learning/`).
 
-**SRS engine path:** `$SAGE_ROOT/tools/srs/srs_engine.py` — used for live grading during reviews. See `references/ref-srs.md` for full command reference.
+**SRS engine path:** `$SAGE_ROOT/tools/srs/srs_engine.py` — used for live grading during reviews. See `ref-srs.md` (this directory, `$SAGE_ROOT/skills/sage/references/`) for full command reference.
 
 | Agent              | Operation            | When                                                                                                                                                               | Call Pattern                                                                                                                                                                                             |
 | ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | artifact-clerk     | `brief`              | Session start (resume)                                                                                                                                             | `Operation: brief\nPath: <absolute-learning-path>/\nProject: <project-folder-name>`                                                                                                                      |
 | artifact-clerk     | `checkpoint`         | Session end                                                                                                                                                        | `Operation: checkpoint\nPath: <absolute-learning-path>/\nProject: <project-folder-name>\n\n[session notes]`                                                                                              |
+| artifact-clerk     | `coach-reflect`      | After checkpoint, when CE-#/CP-# entries were created, updated, or resolved this session (see `ref-session-end.md`)                                                | `Operation: coach-reflect\nPath: <absolute-learning-path>/`                                                                                                                                              |
+| artifact-clerk     | `patch-metrics`      | Session end, after the wrapup script returns a duration                                                                                                            | `Operation: patch-metrics\nPath: <absolute-learning-path>/\nDuration: <duration or learner-supplied wall time>`                                                                                          |
 | assessment-agent   | `select-and-prepare` | Session start (warm-up), post-material checks                                                                                                                      | `Operation: select-and-prepare\nPath: <absolute-learning-path>/\n\nSession context: [...]\nCount: 3\nMin mastery: developing`                                                                            |
 | assessment-agent   | `generate`           | After covering new material                                                                                                                                        | `Operation: generate\nPath: <absolute-learning-path>/\n\nTarget:\n- Concept: [...]\n- Difficulty: [1-5]\n- Question type: [free_recall \| conceptual \| application \| analysis \| transfer \| reverse]` |
 | assessment-agent   | `evaluate`           | After learner answers assessment                                                                                                                                   | `Operation: evaluate\nPath: <absolute-learning-path>/\n\nQuestion ID: q-N\nQuestion text: [...]\nExpected answer: [...]\nLearner response: [...]\nSession: [N]`                                          |
 | verification-gate  | `verify-claims`      | Session start (batch) + topic-section gate at each topic transition + message-counter fallback (5+ messages without a gate) + ad-hoc fallback for unplanned claims | `Operation: verify-claims\nTopic: [...]\n\nClaims:\n1. [...]`                                                                                                                                            |
 | verification-gate  | `verify-code`        | Before presenting code examples                                                                                                                                    | `Operation: verify-code\nLanguage: [...]\nExpected behavior: [...]\n\nCode:\n[...]`                                                                                                                      |
 | verification-gate  | `verify-cards`       | Before checkpoint (new cards only)                                                                                                                                 | `Operation: verify-cards\nTopic: [...]\n\nCards:\n[card definitions]`                                                                                                                                    |
+| verification-gate  | `verify-demo`        | After demo-generator produces a demo, before showing it to the learner (see `ref-plateau.md`)                                                                      | `Operation: verify-demo\nConcept: <name>\nMisconception: M[N] — [desc]\n\nDemo:\n[demo html or path]`                                                                                                    |
 | reference-clerk    | `generate`           | Learner requests, concept deeply explored, or after misconception                                                                                                  | `Operation: generate\nPath: <absolute-project-root>/\nConcept: <name>\nContext: [...]\n\nSource material:\n[...]`                                                                                        |
 | reference-clerk    | `update`             | Corrections or additions to existing ref doc                                                                                                                       | `Operation: update\nPath: <absolute-project-root>/\nConcept: <name>\nUpdates:\n- [...]`                                                                                                                  |
 | reference-clerk    | `audit`              | Check coverage gaps                                                                                                                                                | `Operation: audit\nPath: <absolute-project-root>/`                                                                                                                                                       |

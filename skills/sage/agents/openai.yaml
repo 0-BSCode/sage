@@ -1,0 +1,5 @@
+interface:
+  display_name: "Sage"
+  short_description: "Evidence-based learning coach with spaced repetition"
+policy:
+  allow_implicit_invocation: false

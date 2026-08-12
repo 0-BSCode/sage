@@ -12,7 +12,7 @@ You have access to a spaced repetition scheduling engine that implements the SM-
 | `python3 "$SAGE_ROOT/tools/srs/srs_engine.py" grade <path> <card-id> <quality>` | Grade a card (0-5), update schedule | **You run this directly** — after assessing each card during review |
 | `python3 "$SAGE_ROOT/tools/srs/srs_engine.py" forecast <path> --days 14` | Show what's due each day | Session end (Artifact Clerk handles this) |
 
-All commands accept `--json` for machine-readable output. `<path>` is the `<topic-slug>/learning/` directory. Always resolve `SAGE_ROOT` first: `SAGE_ROOT=$(cat /tmp/.sage-plugin-root)`.
+All commands accept `--json` for machine-readable output. `<path>` is the `<topic-slug>/learning/` directory. Always resolve `SAGE_ROOT` first: `SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"`.
 
 ## Quality Scale
 
@@ -30,7 +30,7 @@ All commands accept `--json` for machine-readable output. `<path>` is the `<topi
 - **Presenting cards:** The `due` command truncates question text. Before presenting any card to the learner, **read the full question and answer from `cards.md`** directly. Never rely on the `due` output's `question_preview`.
 - **During review:** After assessing each card, **immediately run the grade command** — do not batch these or defer to the clerk:
   ```bash
-  SAGE_ROOT=$(cat /tmp/.sage-plugin-root)
+  SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"
   python3 "$SAGE_ROOT/tools/srs/srs_engine.py" grade <path> <card-id> <quality>
   ```
   This is live pedagogical work, not bookkeeping. The engine is the source of truth for review history.
