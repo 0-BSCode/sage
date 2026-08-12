@@ -2,7 +2,9 @@
 # Link this working tree into every Host's skill directory.
 #
 # For development only. Users install via the plugin manifests
-# (`.claude-plugin/`, `.codex-plugin/`) — one command per Host.
+# (`.claude-plugin/`, `.codex-plugin/`) — one command per Host. Do not link
+# Sage into ~/.agents/skills while the Codex plugin is installed: both copies
+# expose `sage`, which prevents Codex from registering `sage:sage`.
 #
 # Each link points at this repo, so `git pull` keeps every Host current.
 # Pointing all Hosts at one tree also removes the shared-/tmp-slot ambiguity

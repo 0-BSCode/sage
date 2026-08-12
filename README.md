@@ -80,9 +80,9 @@ verification nudges, not the coaching. See
 
 Every command takes a verb: `learn <topic>` or `archive <topic>`.
 
-On Claude Code these are slash commands — `/sage learn <topic>`. Codex has no
-slash commands for skills, so invoke Sage by name and include the verb:
-*"Use sage to learn React hooks."* Everything below is written in the Claude
+On Claude Code these are slash commands — `/sage learn <topic>`. In Codex,
+invoke the skill explicitly and include the verb: `$sage learn React hooks`.
+Everything below is written in the Claude
 form; the verb and topic are what matter on either Host.
 
 ### First session
