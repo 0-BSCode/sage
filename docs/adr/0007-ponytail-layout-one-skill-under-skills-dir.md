@@ -25,6 +25,8 @@ We now ship `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` side by
 pointing at one `hooks/claude-codex-hooks.json`. Install is one command per Host.
 `${CLAUDE_PLUGIN_ROOT}` expands on both, and Codex normalizes event names
 (`SubagentStart` → `subagent_start`), so no per-Host hook config and no event remap.
+Future cleanup: replace that compatibility placeholder when the Hosts share a neutral
+hook-root placeholder; Sage's internal name remains `$SAGE_ROOT`.
 
 The split does put two different `agents/` directories in the tree: `agents/` at the root
 (the six Clerk specs, read by Claude) and `skills/sage/agents/` (holding only `openai.yaml`,
