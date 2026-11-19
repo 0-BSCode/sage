@@ -56,6 +56,39 @@ Sage: Good instinct. But you said it's offloaded to "another stack."
 
 ## Install
 
+### Guided user-wide setup
+
+From a checkout, run:
+
+```bash
+node bin/sage.js init
+```
+
+Select Claude Code, Codex, or both. The initializer checks Python 3.8+, Git,
+and the selected host CLIs, then uses native user-wide plugin installation.
+Node 22+ is required for setup. Plugin resources stay in each host's managed
+cache; they do not depend on the initializer's directory after setup.
+
+The npm setup package is not published yet. Once a registry name is finalized
+and the package is published, the same entrypoint will be available through
+`npx <package> init`. For local packaging verification, run `npm run pack:check`.
+Do not assume `sage-learning-setup` is available from the public registry.
+
+After setup, start a new host session and complete any required hook review
+(Codex: `/hooks`). Registration does not automatically grant hook trust or
+filesystem access. On first use, Sage asks where to store learning records;
+existing `~/.config/sage/config.json` is preserved. You can start Sage from any
+directory while using the same learning root, subject to host permissions.
+
+Run setup again to configure another host or retry an incomplete installation.
+Compatible installations are reused without an implicit upgrade. If setup
+reports a standalone Sage skill, another marketplace source, disabled plugin,
+or an older layout, reconcile that registration using native host management
+and retry. Setup does not delete user skills, replace marketplaces, or relax
+permissions. Review failed-host results even if the other host succeeded.
+
+### Manual native installation
+
 **Claude Code**
 
 ```bash
@@ -70,10 +103,11 @@ codex plugin marketplace add 0-BSCode/sage
 codex plugin add sage@sage
 ```
 
-Then run `codex`, open `/hooks`, review and trust Sage's four lifecycle hooks,
+Then run `codex`, open `/hooks`, review and trust Sage's lifecycle hooks,
 and start a new thread. Codex pins each hook by hash, so it asks again after an
-update that changes one. Until you trust them Sage still teaches — you lose the
-verification nudges, not the coaching. See
+update that changes one. Until you trust them Sage still teaches using explicit protocol checks, but
+automatic reminders and stop-hook safeguards are unavailable. Sage reports this
+limitation rather than claiming equivalent enforcement. See
 [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
 
 ## Usage

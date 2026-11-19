@@ -107,38 +107,24 @@ python3 "$SAGE_ROOT/tools/session_wrapup.py" "$SAGE_ROOT" "<abs-learning-path>" 
 
 ---
 
-## `/tmp/.sage-plugin-root` is a single global slot shared by every Host
+## Portable setup limitations (v1.3.0)
 
-**Status:** known, accepted. Escape hatch shipped in v1.2.0.
+Global `/tmp/.sage-plugin-root` and `/tmp/.sage-learning-root` discovery is
+retired. Loaded-skill-relative paths and explicit session bindings replace it;
+obsolete files are ignored and need not be deleted.
 
-`${CLAUDE_PLUGIN_ROOT}` is a hook-config substitution and is **not** present in the
-Bash tool's environment, so `/tmp/.sage-plugin-root` is the only bridge from hook
-space into the prose bash blocks. Every Host's `SessionStart` writes that same path.
-
-Run Sage on two Hosts on one machine and the last session started wins:
-
-- Claude Code writes its plugin root (e.g. a local dev checkout)
-- Codex writes its version-pinned cache path (`~/.codex/plugins/cache/sage/sage/<version>/`)
-
-Both are valid Sage trees, so nothing crashes. It bites as **silent version skew**:
-the protocol you are reading comes from one tree while the tools you are running come
-from another. Most likely during development, when a working tree and a released
-install are both active.
-
-**Escape hatch:** every bootstrap line now prefers an exported variable —
-
-```bash
-SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"
-```
-
-Export `SAGE_ROOT` per shell (or per Host profile) and the shared file stops mattering.
-`scripts/link-skills.sh` points both Hosts at the same working tree, which removes the
-ambiguity for the development case entirely.
-
-**Not fixed** because session-scoping the filename needs a session id available inside
-prose bash. Claude Code exports `CLAUDE_CODE_SESSION_ID`; no equivalent is confirmed on
-Codex. That is a mechanism to build and validate for a failure mode requiring two Hosts,
-two versions, and interleaved sessions.
-
-`/tmp/.sage-learning-root` has the same structure but is benign — the Learning Root is
-Host-independent.
+- Host hooks must be enabled/trusted and provide startup parent identity. Without
+  that identity Sage reports unavailable automatic safeguards and uses explicit
+  protocol/tool checks. It never guesses a session from cwd or newest files.
+- Codex plugin plus standalone skill registrations can collide. The initializer
+  reports conflicts and leaves manual reconciliation to the user.
+- A user-wide plugin does not grant access to directories outside a host sandbox.
+  Grant learning/runtime-directory access through native host controls.
+- Session state is isolated across hosts, but simultaneous writes to the same
+  learning journey are not supported. Cross-host resume is sequential.
+- Cross-reference staleness still uses the existing 30-minute mtime heuristic and
+  learning-root-wide rule. This change preserves that rule rather than replacing
+  it with a transactional change journal.
+- Hard-closing a host does not guarantee checkpointing the current lesson.
+- The initializer package is not published; use the checkout command in README.
+- Real-host acceptance status is recorded in `portable-setup-acceptance.md`.

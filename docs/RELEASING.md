@@ -1,6 +1,6 @@
 # Releasing
 
-There is no release pipeline: **merging to main is publishing**, because
+For native plugins, **merging to main is publishing**, because
 installs track this repository directly. These rules exist so every published
 change has a version identity and a stated reason.
 
@@ -40,3 +40,18 @@ The plugin is on the 1.x line but is still maturing; treat versions as:
   2. *Artifacts* — the learning-journey files written into a user's project.
      These outlive upgrades: a new version must read artifacts written by any
      earlier 1.x version, or ship a migration.
+
+## Setup package
+
+`package.json` mirrors the authoritative plugin version. Changes under `bin/`,
+`setup/`, and setup packaging files are shipping changes and require a version
+bump plus changelog entry, just like plugin changes. Run `npm test` and
+`npm run pack:check` as well as the Python suite and native manifest validation.
+
+The package name is provisional until registry ownership is confirmed. npm
+publication is separate from repository-based plugin releases: this repository
+does not automatically publish packages or configure registry credentials.
+Inspect a local tarball before separately authorized publication. Never publish
+from this development workflow or imply that an unpublished npx command works.
+The initializer checks actual installed capabilities; its version alone cannot
+prove a marketplace plugin has been updated.
