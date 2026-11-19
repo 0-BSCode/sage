@@ -2,3 +2,6 @@ context/
 __pycache__
 graveyard/
 .obsidian/
+
+.venv/
+*.tgz
