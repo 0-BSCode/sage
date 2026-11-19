@@ -1,0 +1,31 @@
+{
+  "name": "sage-learning-setup",
+  "version": "1.3.0",
+  "description": "User-wide Sage setup for Claude Code and Codex",
+  "type": "module",
+  "bin": {
+    "sage": "bin/sage.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin/",
+    "setup/*.js",
+    "setup/hosts/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test setup/tests/*.test.js",
+    "pack:check": "node scripts/check-package.js"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0-BSCode/sage.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
