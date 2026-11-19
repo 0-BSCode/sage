@@ -75,7 +75,12 @@ An initial Codex test profile lacked its explicitly configured CODEX_HOME
 directory; after creating that disposable directory, native registration passed.
 This was a test-profile setup issue, not a host registration success claim.
 
-## Remaining acceptance gates
+## Deferred post-deployment acceptance
+
+On 2026-11-19, the owner approved releasing first and testing the installed
+release afterward. Live tests do not block the initial release or archival of
+the implementation. They remain required before claiming fully verified host
+support. Track execution in [the post-deployment checklist](portable-setup-post-deploy.md).
 
 OpenSpec tasks 6.2 and 6.3 remain unchecked because neither disposable host profile
 was authenticated: Claude reported `loggedIn: false`; Codex reported `Not logged
@@ -93,8 +98,9 @@ profiles with hooks reviewed through native controls:
 3. Complete a short lesson/checkpoint in Claude and resume in Codex, then reverse
    direction. Confirm due reviews, misconceptions, plan position and next step in
    the conversational brief, not just the files.
-4. Record actual trust/restart behavior and host versions, then complete tasks
-   6.2 and 6.3 only when that evidence exists.
+4. Record actual trust/restart behavior and host versions in this report, then
+   complete the corresponding follow-up checklist items only when evidence exists.
+   Archived tasks 6.2 and 6.3 retain their deferred status as the historical record.
 
 The npm name is provisional and the package has not been published. The local
 initializer targets the official marketplace source; until the updated plugin is

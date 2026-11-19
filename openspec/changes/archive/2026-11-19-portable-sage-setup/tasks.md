@@ -40,6 +40,13 @@
 
 ## 6. Cross-host acceptance
 
+Tasks 6.2 and 6.3 are **DEFERRED to post-deployment testing**, not completed.
+The owner approved initial deployment before live acceptance on 2026-11-19.
+They remain unchecked in this archived implementation record; execution and
+results are tracked in `docs/portable-setup-post-deploy.md` and
+`docs/portable-setup-acceptance.md`. This decision permits archival with two
+incomplete tasks and does not establish full conversational compatibility.
+
 - [x] 6.1 Exercise actual checkpoint writers, SRS state, router resume, and specialist brief inputs across two isolated installation roots in both host directions; verify plan position, due reviews, misconceptions, and next-step continuity without record migrations.
 - [ ] 6.2 Run real-host smoke sessions in disposable authorized Claude Code and Codex profiles from unrelated working directories; record host versions, native plugin and specialist discovery, trust/restart steps, startup context, verification reminders, card warnings, and stale cross-reference blocking in an acceptance report.
 - [ ] 6.3 Complete sequential learning/checkpoint/resume in both real-host directions and an inactive-session isolation check; record evidence in the acceptance report, marking any blocked checks explicitly rather than claiming mocked parity.
@@ -48,4 +55,5 @@
 ## Workflow follow-up
 
 - Choose the final npm registry name and ownership before separately authorized publication.
-- Review and archive the change after implementation and acceptance are complete.
+- Archive the implemented change with live acceptance explicitly deferred under
+  the decision above; complete the follow-up checklist after deployment.

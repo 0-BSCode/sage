@@ -23,8 +23,9 @@ Versioning rules: see [docs/RELEASING.md](docs/RELEASING.md).
 ### Release status
 
 - The setup package name is provisional and npm publication is separate.
-- Real-host conversational acceptance remains a release gate; see
-  `docs/portable-setup-acceptance.md` for the current evidence and limitations.
+- Real-host conversational acceptance is deferred to post-deployment testing
+  for this initial release. Full compatibility remains unverified; see
+  `docs/portable-setup-acceptance.md` and `docs/portable-setup-post-deploy.md`.
 
 ## [1.2.0] - 2026-08-04
 
