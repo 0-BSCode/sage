@@ -9,10 +9,18 @@ disable-model-invocation: true
 
 You are running a Sage session. You act as the evidence-based coach yourself — the complete protocol is defined below. You delegate only to the Clerks listed in `references/ref-subagents.md` (artifact-clerk, assessment-agent, verification-gate, reference-clerk, demo-generator, capstone-architect). Your goal is to help the user rapidly acquire deep, durable mastery of their chosen topic through scientifically validated learning techniques.
 
-**Paths in this file.** Every `references/…` path is relative to **this file's
-directory**, `$SAGE_ROOT/skills/sage/`. `$SAGE_ROOT` is the *plugin root*, one
-level above — it is the prefix for `tools/…` and `agents/…` only. Resolving
-`references/…` against `$SAGE_ROOT` yields a path that does not exist.
+**Paths in this file.** Resolve the real absolute location of this loaded
+`SKILL.md`, including symlinks. The plugin root is its third parent (the
+`skills/sage/` directory is two levels below the plugin root). Never derive it
+from cwd, a guessed cache location, or global temporary files. Validate it with
+`python3 "<resolved-root>/tools/plugin_root.py" "<loaded-SKILL.md>"`.
+An explicitly exported development `SAGE_ROOT` can be passed as `--root`, but
+must pass the same validation. Substitute the validated absolute root in every
+shell call; shell variables do not necessarily persist between calls.
+
+Every `references/…` path is relative to this skill directory. `$SAGE_ROOT/tools/…`
+and `$SAGE_ROOT/agents/…` are relative to the plugin root. Pass that absolute
+`SAGE_ROOT` to every specialist alongside its specification and operation.
 
 ## The Topic/Skill to Master
 
@@ -32,7 +40,7 @@ indistinguishable from the archive verb) and bypasses the `unknown_verb` branch
 that catches a bad parse.
 
 ```bash
-SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"
+SAGE_ROOT="<validated absolute plugin root resolved from this loaded skill>"
 python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "<the learner's request, verbatim>"
 ```
 
@@ -64,6 +72,10 @@ python3 "$SAGE_ROOT/tools/session_router.py" "$SAGE_ROOT" "<the learner's reques
 - If `mode` is `archive`: follow the **Archive Flow** below. This is NOT a learning session — do not read eager-load references or enter Phase 1.
 
 Use `topic_path` and `sage_root` from the output for all subsequent commands.
+For fresh/resume only, read `references/ref-host-session.md` and activate using the
+trusted startup parent identity. Follow its operation start/completion protocol
+for every specialist, including inline work. Missing identity must be disclosed;
+it does not authorize guessing or skipping explicit verification checks.
 
 ### Archive Flow
 
@@ -379,7 +391,7 @@ Core rules:
 
 ## SRS Engine
 
-SM-2 spaced repetition scheduler. Resolve path with `SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"`. You grade cards directly during reviews; the clerk handles init/sync/forecast. Before your first SRS review in a session, read `references/ref-srs.md` for commands, quality scale, and grading protocol.
+SM-2 spaced repetition scheduler. Resolve path with `SAGE_ROOT="<validated absolute plugin root resolved from this loaded skill>"`. You grade cards directly during reviews; the clerk handles init/sync/forecast. Before your first SRS review in a session, read `references/ref-srs.md` for commands, quality scale, and grading protocol.
 
 ## Plateau Detector
 

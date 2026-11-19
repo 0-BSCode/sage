@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"${CLAUDE_PLUGIN_ROOT}\" > /tmp/.sage-plugin-root && python3 \"${CLAUDE_PLUGIN_ROOT}/tools/config.py\" > /tmp/.sage-learning-root 2>/dev/null || true",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/tools/host_hooks.py\" --host claude-code --event SessionStart",
             "timeout": 5
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/checkpoint-guard.sh\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/tools/host_hooks.py\" --host claude-code --event SubagentStart",
             "timeout": 5
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/reset-verification.sh\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/tools/host_hooks.py\" --host claude-code --event SubagentStop",
             "timeout": 5
           }
         ]
@@ -35,16 +35,21 @@
     ],
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/enforce-cross-refs.sh\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/tools/host_hooks.py\" --host claude-code --event Stop",
             "timeout": 5
-          },
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verification-counter.sh\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/tools/host_hooks.py\" --host claude-code --event SessionEnd",
             "timeout": 5
           }
         ]

@@ -45,28 +45,38 @@ def _recently_modified(path, now):
         return False
 
 
-def _has_promoted_concept(path):
+def _has_promoted_concept(path, strict=False):
     try:
         with open(path, encoding="utf-8") as fh:
             lowered = fh.read().lower()
     except OSError:
+        if strict:
+            raise
         return False
     return any(marker in lowered for marker in PROMOTED_MARKERS)
 
 
-def check(learning_root, now=None):
+def check(learning_root, now=None, strict=False):
     """Return a reason string when cross-refs are stale, else None."""
     if not learning_root or not os.path.isdir(learning_root):
+        if strict:
+            raise OSError('Learning directory is unavailable: %s' % learning_root)
         return None
+    if strict and not os.access(learning_root, os.R_OK | os.W_OK | os.X_OK):
+        raise PermissionError('Learning directory access denied: %s' % learning_root)
+
+    def walk_error(error):
+        if strict:
+            raise error
 
     now = time.time() if now is None else now
 
     touched = False
-    for dirpath, _dirnames, filenames in os.walk(learning_root):
+    for dirpath, _dirnames, filenames in os.walk(learning_root, onerror=walk_error):
         if "knowledge-map.md" not in filenames:
             continue
         kmap = os.path.join(dirpath, "knowledge-map.md")
-        if _recently_modified(kmap, now) and _has_promoted_concept(kmap):
+        if _recently_modified(kmap, now) and _has_promoted_concept(kmap, strict):
             touched = True
             break
 
@@ -75,7 +85,7 @@ def check(learning_root, now=None):
 
     cross_refs = os.path.join(learning_root, "cross-refs")
     if os.path.isdir(cross_refs):
-        for dirpath, _dirnames, filenames in os.walk(cross_refs):
+        for dirpath, _dirnames, filenames in os.walk(cross_refs, onerror=walk_error):
             for name in filenames:
                 if name.endswith(".md") and _recently_modified(
                     os.path.join(dirpath, name), now
