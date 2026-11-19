@@ -47,3 +47,8 @@ We considered one alternative:
   moves, but no plugin manifest and therefore no hooks on Codex. Rejected: it trades a
   four-line change for permanent install friction, and the `git mv` becomes unavoidable the
   first time a second Sage skill ships.
+
+## Subsequent decision
+
+See ADR 0009 for user-wide setup, host-specific hook adapters and the replacement
+of global temporary bootstrap files with installation-relative paths.

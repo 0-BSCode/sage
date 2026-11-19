@@ -64,7 +64,7 @@ Check for consistency warnings and address any flagged issues.
 After all post-checkpoint work is complete, run the wrapup script:
 
 ```bash
-SAGE_ROOT="${SAGE_ROOT:-$(cat /tmp/.sage-plugin-root 2>/dev/null)}"
+SAGE_ROOT="<absolute plugin root supplied by the coach>"
 python3 "$SAGE_ROOT/tools/session_wrapup.py" "$SAGE_ROOT" "<topic_path>"
 ```
 
@@ -86,11 +86,17 @@ Delegate to `artifact-clerk` with the spec pointer followed by
 The clerk patches the session duration into the latest journal entry.
 
 **Fallback:** `duration` is null whenever no session transcript can be trusted —
-either the lookup failed, or the Host does not expose a session id at all (only
-Claude Code does). In both cases ask the learner for the session wall time and
+either the lookup failed, or the Host does not expose a session id at all (the current
+transcript integration only supports Claude Code). In both cases ask the learner for the session wall time and
 pass that as the `Duration` value instead. Never pass a guessed number.
 
-## 8. Confirm to Learner
+## 8. Close Active Session and Confirm to Learner
+
+After patch-metrics and all pending operations finish, follow the close command in
+`ref-host-session.md`. Only report a clean checkpoint after validation succeeds.
+If automatic session context is unavailable, report that limitation and still
+resolve stale cross-references through the wrap-up tool.
+
 
 Tell them what was saved and when their next spaced review is due.
 

@@ -7,6 +7,8 @@ Bundles post-checkpoint scripts into a single invocation:
   3. session_duration.py (current-sitting wall time from the transcript)
 
 Each step catches failures independently — partial results are returned.
+Optional reporting failures are warnings. Cross-reference validation failures
+are blocking_errors, also exposed as errors for existing callers.
 
 Usage:
     python3 session_wrapup.py <sage_root> <topic_path> [--session-id SESSION_ID]
@@ -38,8 +40,9 @@ def run_script(cmd, label):
         return False, f"{label} failed: {e}"
 
 
-def run(sage_root, topic_path, session_id=""):
+def run(sage_root, topic_path, session_id="", learning_root=None):
     errors = []
+    warnings = []
     coach_metrics_flags = []
     insight_updates = []
 
@@ -50,7 +53,7 @@ def run(sage_root, topic_path, session_id=""):
         "coach_metrics",
     )
     if not coach_metrics_ok:
-        errors.append(f"coach_metrics: {coach_metrics_out}")
+        warnings.append(f"coach_metrics: {coach_metrics_out}")
     else:
         for line in coach_metrics_out.splitlines():
             if "flag:" in line.lower() or "warning:" in line.lower():
@@ -65,7 +68,7 @@ def run(sage_root, topic_path, session_id=""):
             "coach_reflector",
         )
         if not insights_ok:
-            errors.append(f"coach_reflector: {insights_out}")
+            warnings.append(f"coach_reflector: {insights_out}")
         else:
             for line in insights_out.splitlines():
                 if "recommended" in line.lower() and "status" in line.lower():
@@ -91,7 +94,7 @@ def run(sage_root, topic_path, session_id=""):
         duration = duration_out if duration_ok and duration_out else None
         if not duration_ok:
             # Non-blocking: duration is best-effort. The clerk falls back to asking the learner.
-            errors.append(f"session_duration: {duration_out}")
+            warnings.append(f"session_duration: {duration_out}")
     else:
         # No transcript we can trust — the clerk asks the learner for wall time.
         duration = None
@@ -104,7 +107,7 @@ def run(sage_root, topic_path, session_id=""):
         from config import get_learning_root
         from cross_refs_check import check as check_cross_refs
 
-        cross_refs_stale = check_cross_refs(get_learning_root())
+        cross_refs_stale = check_cross_refs(learning_root or get_learning_root(), strict=True)
     except Exception as e:
         errors.append(f"cross_refs_check: {e}")
 
@@ -116,6 +119,8 @@ def run(sage_root, topic_path, session_id=""):
         "insights_ok": insights_ok,
         "insight_updates": insight_updates,
         "errors": errors,
+        "blocking_errors": errors,
+        "warnings": warnings,
     }
 
 

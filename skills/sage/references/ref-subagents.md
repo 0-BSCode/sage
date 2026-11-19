@@ -2,6 +2,10 @@
 
 You delegate to several **Clerks**. Each has its own spec defining its behavior and boundaries — you only need to know when and how to call them. How a subagent gets spawned is the Host's business; name the Clerk and let the Host bind it.
 
+Before every delegation, follow `ref-host-session.md`: register the operation and
+pass its token, host, parent identity, and plugin root to the worker. Record actual
+completion or failure after the operation. Apply the same lifecycle inline.
+
 **Every delegation begins with the Clerk's spec pointer, then the operation payload:**
 
 ```
@@ -50,6 +54,15 @@ perform the operation inline. Be aware this costs context, and that running
 | demo-generator     | `update`             | Demo needs adjustment after feedback                                                                                                                               | `Operation: update\nPath: <absolute-learning-path>/\nMisconception: M[N]\nUpdates:\n- [...]`                                                                                                             |
 | capstone-architect | `propose`            | Learner requests capstone, `/capstone` command, or coach judges mastery is sufficient                                                                              | `Operation: propose\nPath: <absolute-learning-path>/\nAudience: <audience string>`                                                                                                                       |
 | capstone-architect | `specify`            | After learner selects a project from proposals                                                                                                                     | `Operation: specify\nPath: <absolute-learning-path>/\nSelected: <project title>\nAudience: <audience string>\n\nProject details:\n<full proposal text>`                                                  |
+
+## Host metadata and paths
+
+The YAML frontmatter in root-level `agents/*.md` is native host configuration.
+Only Claude Code uses its `model` and `color` fields. Generic and inline workers
+follow the Markdown body using their host's selected model; never request a
+provider-specific model merely because it appears in the frontmatter.
+Pass the validated absolute plugin root in each delegation. Reuse it in every
+shell call; never discover tools from cwd or a shared temporary file.
 
 ## Key Integration Notes
 

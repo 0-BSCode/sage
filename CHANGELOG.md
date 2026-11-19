@@ -4,6 +4,29 @@ All notable changes to the sage plugin are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning rules: see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 1.3.0
+
+### Added
+
+- Guided user-wide setup for Claude Code, Codex, or both, using native plugin
+  registration, prerequisite/conflict detection, and safe repeat setup.
+- Host-qualified session state and explicit specialist operation tokens, with
+  isolated resource, hook, installer, package, and cross-host record tests.
+
+### Changed
+
+- Resolve tools from the loaded plugin rather than shared temporary root files.
+- Use Python hook adapters for active Sage sessions, independent of cwd; retain
+  verification reminders, advisory checkpoint warnings, and cross-reference blocks.
+- Keep native Claude specialists and existing learning-record formats/invocations.
+
+### Release status
+
+- The setup package name is provisional and npm publication is separate.
+- Real-host conversational acceptance is deferred to post-deployment testing
+  for this initial release. Full compatibility remains unverified; see
+  `docs/portable-setup-acceptance.md` and `docs/portable-setup-post-deploy.md`.
+
 ## [1.2.0] - 2026-08-04
 
 Multi-Host support: Sage now installs on Codex CLI with one command, alongside

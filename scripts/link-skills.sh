@@ -7,8 +7,7 @@
 # expose `sage`, which prevents Codex from registering `sage:sage`.
 #
 # Each link points at this repo, so `git pull` keeps every Host current.
-# Pointing all Hosts at one tree also removes the shared-/tmp-slot ambiguity
-# described in docs/KNOWN-ISSUES.md, because there is only one plugin root to write.
+# Linked skills resolve their own real path; no global temporary root is used.
 #
 # Re-run after adding, removing, or renaming a skill.
 #
@@ -69,5 +68,5 @@ for target in "${TARGETS[@]}"; do
 done
 
 echo
-echo "Export SAGE_ROOT to pin the plugin root for this shell:"
+echo "Optional explicit development override (validated by plugin_root.py):"
 echo "  export SAGE_ROOT=\"$REPO_ROOT\""

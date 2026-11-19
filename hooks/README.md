@@ -1,54 +1,41 @@
 # Sage Hooks
 
-## Debugging
+Native manifests select `claude-hooks.json` or `codex-hooks.json`. Each invokes
+`tools/host_hooks.py` directly with an explicit host and event. Runtime hooks
+require Python 3.8+; Bash/jq are not dependencies of this path.
 
-To see whether a hook fired and which branch it took, run it under `bash -x`
-with a sample event on stdin:
+| Event or operation | Behavior | Regression coverage |
+|---|---|---|
+| SessionStart | Supplies host, parent session ID and loaded plugin root; does not activate Sage | `test_host_hooks.py` |
+| Explicit session activation | Binds the selected learning root/topic; independent of cwd | `test_session_context.py` |
+| Verification operation completion | Resets reminder cycle; successful verify-cards sets a lifecycle marker | `test_reset_verification.py` |
+| Checkpoint operation start | Warns about cards without a verification marker; consumes the marker | `test_checkpoint_guard.py` |
+| Stop | Warns once after five responses; blocks stale cross-references for active Sage sessions | `test_verification_counter.py`, `test_enforce_cross_refs.py` |
+| SessionEnd | Best-effort active-state cleanup | `test_host_hooks.py` |
 
-```bash
-echo '{"session_id":"test","cwd":"'"$PWD"'","stop_hook_active":false}' \
-  | bash -x hooks/scripts/enforce-cross-refs.sh
-```
+The shared specialist start/completion tools are required by the coaching
+protocol. Native subagent events alone do not prove which operation ran or that
+verification succeeded, and a generic host need not expose an operation prompt.
+Explicit tokens support native, generic, and inline workers. Only correlate an
+agent ID with an exact token; never guess the latest pending worker.
 
-## Hook Reference
+Only stale cross-references block normal stopping. The card guard is advisory.
+The cross-reference rule remains in `tools/cross_refs_check.py` and is called by
+wrap-up even when hooks are disabled. A successful specialist completion marker
+records execution, not factual truth. Inline verification remains self-checking.
 
-One config, `claude-codex-hooks.json`, serves both Claude Code and Codex — both
-support these events and the same stdin/stdout JSON contract, and Codex normalizes
-the event names itself (`SubagentStart` → `subagent_start`).
+State is stored under `~/.config/sage/runtime/<host>/<hashed-parent-id>/`, with
+atomic writes and locking. Unrelated sessions remain inactive, even inside the
+learning directory. Missing parent identity produces a diagnostic and never
+selects another session. Recursive stop hooks are ignored. Identifiable active
+sessions report validation/access errors rather than implying a clean check.
 
-| Hook | Event | Script | Purpose |
-|------|-------|--------|---------|
-| Verification counter | Stop | `scripts/verification-counter.sh` | Counts coach messages since last verification-gate call. Warns at 5+. |
-| Reset verification | SubagentStop | `scripts/reset-verification.sh` | Resets counter when a verification-gate Clerk is called. Creates counter file on first call. |
-| Checkpoint guard | SubagentStart | `scripts/checkpoint-guard.sh` | Guards checkpoint calls. |
-| Enforce cross-refs | Stop | `scripts/enforce-cross-refs.sh` | Blocks session end if knowledge maps were modified but cross-refs/ wasn't updated. |
+To inspect state, run `session_context.py --host <host> --session-id <parent> inspect`
+under the installed `tools/` directory. Get the real parent identity from startup
+context; do not guess. See `skills/sage/references/ref-host-session.md` for the
+complete operation lifecycle and close protocol.
 
-## Design notes
-
-**Only one hook enforces anything.** `enforce-cross-refs.sh` is the sole
-`"decision": "block"`; the other three are advisory. That check therefore lives in
-`tools/cross_refs_check.py` and is called by `session_wrapup.py` too, so it holds on
-Hosts with no hook system — the hook is only the automatic trigger. See
-`docs/adr/0006-hooks-are-advisory-invariants-live-in-tools.md`.
-
-**Clerk identification is Host-neutral.** Sage registers no Codex agents, so
-`agent_type` is generic there. Both agent-keyed scripts match on the registered type
-*or* the spec pointer the prose delegation carries in the prompt:
-
-```bash
-IDENT=$(jq -r '.agent_type // .tool_input.subagent_type // empty')
-PROMPT=$(jq -r '.prompt // .tool_input.prompt // empty')
-case "$IDENT$PROMPT" in *verification-gate*) ;; *) exit 0 ;; esac
-```
-
-Unverified on Codex: whether its `SubagentStart` payload carries a prompt. If not,
-these two hooks no-op there — advisory only, so the cost is lost nudges.
-
-**All scripts fail open** — unparseable stdin, a jq error, or an empty payload exits 0.
-A hook must never wedge a session on an untested Host. Each is also capped by a 5s
-`timeout` in the config.
-
-## Known Issues
-
-- ~~`reset-verification.sh` matches `subagent_type == "verification-gate"` but namespaced invocations use `"sage:verification-gate"`. Same for `"artifact-clerk"` vs `"sage:artifact-clerk"`. The counter file never gets created, so the verification overdue warning never fires.~~ **Fixed** — the identity-or-prompt match above matches a substring, so both bare and namespaced forms hit, and the spec-path fallback sidesteps namespacing entirely.
-- State files are `/tmp/sage-*` (renamed from `/tmp/claude-*` in v1.2.0 — they are Sage's own state, and the old name read as wrong on every non-Claude Host).
+Legacy shell filenames remain delegating development shims, requiring explicit
+`SAGE_HOST`; native plugin manifests do not use them. Their former `/tmp` state
+format is retired. Updates change hook hashes: use the host's review controls,
+then start a new session. Automatic safeguards require trusted/enabled hooks.

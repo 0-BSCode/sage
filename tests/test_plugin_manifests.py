@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Coherence tests for the per-Host plugin manifests and the skill layout.
+"""Coherence tests for native manifests, shared resources and host adapters.
 
-`skills/sage/` is referenced by four independent things — the Claude manifest,
-the Codex manifest, the SessionStart hook, and (via /tmp/.sage-plugin-root) the
-prose bash blocks. Moving or renaming it breaks all four *silently*: the plugin
-still installs, the hook still writes a path, and the first symptom is a Clerk
-that cannot find tools/.
-
-Borrowed from ponytail, which ships one adapter test per Host.
+The skill resolves its own installation; each manifest registers the native
+host's Python hook adapter and root-level specialist definitions remain intact.
 """
 
 import json
@@ -19,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CLAUDE_MANIFEST = REPO_ROOT / ".claude-plugin" / "plugin.json"
 CODEX_MANIFEST = REPO_ROOT / ".codex-plugin" / "plugin.json"
 MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
-HOOKS_CONFIG = REPO_ROOT / "hooks" / "claude-codex-hooks.json"
+HOOKS_CONFIG = REPO_ROOT / "hooks" / "claude-hooks.json"
 SKILL_DIR = REPO_ROOT / "skills" / "sage"
 AGENTS_DIR = REPO_ROOT / "agents"
 
@@ -58,6 +53,12 @@ class TestSkillPaths(unittest.TestCase):
         found = [d for d in container.iterdir() if (d / "SKILL.md").is_file()]
         self.assertTrue(found, f"{rel} contains no skill directories")
 
+    def test_resource_resolver_and_native_specialists_ship_together(self):
+        self.assertTrue((REPO_ROOT / "tools/plugin_root.py").is_file())
+        for name in CLERKS:
+            self.assertTrue((AGENTS_DIR / (name + ".md")).is_file())
+        self.assertIn("native host configuration", (SKILL_DIR / "references/ref-subagents.md").read_text())
+
     def test_both_manifests_ship_the_same_skills(self):
         claude = {
             (REPO_ROOT / rel).resolve() for rel in load(CLAUDE_MANIFEST)["skills"]
@@ -68,31 +69,20 @@ class TestSkillPaths(unittest.TestCase):
 
 
 class TestHooks(unittest.TestCase):
-    def test_both_manifests_point_at_the_one_hooks_file(self):
-        self.assertEqual(load(CLAUDE_MANIFEST)["hooks"], "./hooks/claude-codex-hooks.json")
-        self.assertEqual(load(CODEX_MANIFEST)["hooks"], "./hooks/claude-codex-hooks.json")
-        self.assertTrue(HOOKS_CONFIG.is_file())
+    def test_each_manifest_selects_its_host_adapter(self):
+        for manifest, stem in [(CLAUDE_MANIFEST, "claude"), (CODEX_MANIFEST, "codex")]:
+            self.assertEqual(load(manifest)["hooks"], "./hooks/" + stem + "-hooks.json")
+            hooks = load(REPO_ROOT / load(manifest)["hooks"])["hooks"]
+            self.assertEqual(set(hooks), {"SessionStart", "SessionEnd", "SubagentStart", "SubagentStop", "Stop"})
+            for groups in hooks.values():
+                for group in groups:
+                    for hook in group["hooks"]:
+                        self.assertIn("tools/host_hooks.py", hook["command"])
+                        self.assertIn("--host " + ("claude-code" if stem == "claude" else "codex"), hook["command"])
+                        self.assertNotIn("/tmp/", hook["command"])
+                        self.assertNotIn("bash ", hook["command"])
+        self.assertTrue((REPO_ROOT / "tools/host_hooks.py").is_file())
 
-    def test_every_referenced_hook_script_exists(self):
-        raw = HOOKS_CONFIG.read_text(encoding="utf-8")
-        for script in re.findall(r"hooks/scripts/([\w-]+\.sh)", raw):
-            self.assertTrue(
-                (REPO_ROOT / "hooks" / "scripts" / script).is_file(),
-                f"{script} referenced by hooks config but missing",
-            )
-
-    def test_session_start_writes_the_plugin_root(self):
-        raw = HOOKS_CONFIG.read_text(encoding="utf-8")
-        self.assertIn("/tmp/.sage-plugin-root", raw)
-        self.assertIn("${CLAUDE_PLUGIN_ROOT}", raw)
-
-    def test_subagent_events_are_used_not_tool_matchers(self):
-        hooks = load(HOOKS_CONFIG)["hooks"]
-        self.assertIn("SubagentStart", hooks)
-        self.assertIn("SubagentStop", hooks)
-        # PreToolUse/PostToolUse matcher "Agent" is Claude-only vocabulary.
-        self.assertNotIn("PreToolUse", hooks)
-        self.assertNotIn("PostToolUse", hooks)
 
 
 class TestVersionMirror(unittest.TestCase):
@@ -100,6 +90,7 @@ class TestVersionMirror(unittest.TestCase):
         version = load(CLAUDE_MANIFEST)["version"]
         self.assertEqual(load(CODEX_MANIFEST)["version"], version)
         self.assertEqual(load(MARKETPLACE)["plugins"][0]["version"], version)
+        self.assertEqual(load(REPO_ROOT / 'package.json')['version'], version)
 
 
 class TestInvocationPolicy(unittest.TestCase):
@@ -137,8 +128,7 @@ class TestHostNeutralProse(unittest.TestCase):
         self.assertTrue(seen, "no delegation spec pointers found in the prompt layer")
 
     def test_bootstrap_line_prefers_an_exported_root(self):
-        # The bare `SAGE_ROOT=$(cat ...)` form has no escape hatch for the
-        # shared-/tmp-slot clobber. See docs/KNOWN-ISSUES.md.
+        # Installed protocols must not consume a shared temporary root slot.
         for path in self._prose_files():
             text = path.read_text(encoding="utf-8")
             self.assertNotIn(

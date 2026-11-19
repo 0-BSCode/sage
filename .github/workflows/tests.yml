@@ -17,6 +17,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test setup adapters and packed initializer
+        run: |
+          npm test
+          npm run pack:check
+
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
@@ -42,12 +51,17 @@ jobs:
           plugin=$(jq -r .version .claude-plugin/plugin.json)
           marketplace=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
           codex=$(jq -r .version .codex-plugin/plugin.json)
+          package=$(jq -r .version package.json)
           if [ "$plugin" != "$marketplace" ]; then
             echo "::error::marketplace.json ($marketplace) must mirror plugin.json ($plugin) — see docs/RELEASING.md"
             exit 1
           fi
           if [ "$plugin" != "$codex" ]; then
             echo "::error::.codex-plugin/plugin.json ($codex) must mirror .claude-plugin/plugin.json ($plugin) — see docs/RELEASING.md"
+            exit 1
+          fi
+          if [ "$plugin" != "$package" ]; then
+            echo "::error::package.json ($package) must mirror plugin.json ($plugin)"
             exit 1
           fi
           echo "Versions in sync: $plugin"
@@ -62,7 +76,7 @@ jobs:
           # Shipped files. Manifest edits count only when something OTHER than
           # the version fields changed — otherwise a bump alone would make a
           # docs-only PR look like a shipping change and dodge the rejection.
-          shipped=$(git diff --name-only "$base"...HEAD -- SKILL.md agents hooks references skills tools)
+          shipped=$(git diff --name-only "$base"...HEAD -- SKILL.md agents hooks references skills tools bin setup package.json package-lock.json scripts/check-package.js)
           for f in $(git diff --name-only "$base"...HEAD -- .claude-plugin .codex-plugin); do
             case "$f" in
               .claude-plugin/plugin.json|.codex-plugin/plugin.json) strip='del(.version)' ;;

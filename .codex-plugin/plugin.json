@@ -1,6 +1,6 @@
 {
   "name": "sage",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Evidence-based learning coach with spaced repetition, retrieval practice, and mastery tracking",
   "author": {
     "name": "0-BSCode"
@@ -16,14 +16,17 @@
     "socratic-tutoring"
   ],
   "skills": "./skills/",
-  "hooks": "./hooks/claude-codex-hooks.json",
+  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "Sage",
     "shortDescription": "Evidence-based learning coach with spaced repetition",
     "longDescription": "Coaches durable mastery of a topic through retrieval practice, spaced repetition, and Socratic questioning rather than lecturing.",
     "developerName": "0-BSCode",
     "category": "Productivity",
-    "capabilities": ["Instructions", "Lifecycle hooks"],
+    "capabilities": [
+      "Instructions",
+      "Lifecycle hooks"
+    ],
     "websiteURL": "https://github.com/0-BSCode/sage"
   }
 }

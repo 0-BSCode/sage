@@ -38,3 +38,8 @@ We considered two alternatives:
 - **Port the hooks as-is and change nothing** (as `multi-host-support.md` proposed) —
   rejected: it leaves the sole hard invariant depending on Codex's hook trust gate, which
   the same doc lists as an unknown. Relocating ~15 lines removes the question entirely.
+
+## Subsequent decision
+
+See ADR 0009 for user-wide setup, host-specific hook adapters and the replacement
+of global temporary bootstrap files with installation-relative paths.

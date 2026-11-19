@@ -1,6 +1,6 @@
 # Releasing
 
-There is no release pipeline: **merging to main is publishing**, because
+For native plugins, **merging to main is publishing**, because
 installs track this repository directly. These rules exist so every published
 change has a version identity and a stated reason.
 
@@ -40,3 +40,31 @@ The plugin is on the 1.x line but is still maturing; treat versions as:
   2. *Artifacts* — the learning-journey files written into a user's project.
      These outlive upgrades: a new version must read artifacts written by any
      earlier 1.x version, or ship a migration.
+
+## Setup package
+
+`package.json` mirrors the authoritative plugin version. Changes under `bin/`,
+`setup/`, and setup packaging files are shipping changes and require a version
+bump plus changelog entry, just like plugin changes. Run `npm test` and
+`npm run pack:check` as well as the Python suite and native manifest validation.
+
+The package name is provisional until registry ownership is confirmed. npm
+publication is separate from repository-based plugin releases: this repository
+does not automatically publish packages or configure registry credentials.
+Inspect a local tarball before separately authorized publication. Never publish
+from this development workflow or imply that an unpublished npx command works.
+The initializer checks actual installed capabilities; its version alone cannot
+prove a marketplace plugin has been updated.
+
+## Initial portable-setup release
+
+For 1.3.0, live conversational acceptance in Claude Code and Codex is explicitly
+deferred until after deployment. Automated checks and isolated native registration
+have passed; live hook delivery, specialist execution and conversational resume
+remain unverified. These live checks do not block the initial release or archiving
+its implementation change. They still gate claims of fully verified host support.
+
+After deployment, run [the follow-up checklist](portable-setup-post-deploy.md)
+against the installed release and add evidence to
+[the acceptance report](portable-setup-acceptance.md). Keep deferred items open
+until actual results exist. Archiving the implementation does not close them.
